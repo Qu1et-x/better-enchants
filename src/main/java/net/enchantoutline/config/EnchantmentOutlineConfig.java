@@ -9,6 +9,7 @@ import java.io.BufferedWriter;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -18,6 +19,20 @@ import java.util.concurrent.CompletionException;
 public class EnchantmentOutlineConfig {
     public static final Path CONFIG_FILE = FabricLoader.getInstance().getConfigDir().resolve("enchantment-glint-outline.json");
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+
+    public boolean enabled = true;
+    public boolean render_solid = false;
+    public float[] render_solid_outline_color = {0.827f,0.592f,0.973f};
+
+    public Map<String, ItemOverride> overrides;
+
+    public void setEnabled(boolean enabled){
+        this.enabled = enabled;
+    }
+
+    public boolean isEnabled(){
+        return enabled;
+    }
 
     public String toJson() {
         return GSON.toJson(this);
