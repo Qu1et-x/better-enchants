@@ -13,7 +13,7 @@ import net.minecraft.util.ActionResult;
 import java.util.List;
 
 public interface RenderItem {
-    public static class Normal{
+    public static interface Normal{
         public static interface Callback {
             Event<RenderItem.Normal.Callback> EVENT = EventFactory.createArrayBacked(net.enchantoutline.events.RenderItem.Normal.Callback.class,
                     (listeners) -> (receiver, orderedRenderCommandQueue, matrixStack, itemDisplayContext, light, overlay, outlineColors, tintLayers, quads, renderLayer, glintType) -> {

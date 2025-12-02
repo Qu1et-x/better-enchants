@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.enchantoutline.EnchantmentGlintOutline;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.util.math.ColorHelper;
 
 import java.io.BufferedWriter;
 import java.io.Reader;
@@ -32,6 +33,37 @@ public class EnchantmentOutlineConfig {
 
     public boolean isEnabled(){
         return enabled;
+    }
+
+    public void setRenderSolid(boolean renderSolid){
+        this.render_solid = renderSolid;
+    }
+
+    public boolean shouldRenderSolid(){
+        return render_solid;
+    }
+
+    public float[] getOutlineColor()
+    {
+        return render_solid_outline_color;
+    }
+
+    public void setBaseSolidOutlineColorAsInt(int color)
+    {
+        color = ColorHelper.withAlpha(255, color);
+        float[] newOutlineColor = new float[3];
+        newOutlineColor[0] = ColorHelper.getRedFloat(color);
+        newOutlineColor[1] = ColorHelper.getGreenFloat(color);
+        newOutlineColor[2] = ColorHelper.getBlueFloat(color);
+        render_solid_outline_color = newOutlineColor;
+    }
+
+    public int getOutlineColorAsInt(float[] outlineColorFloat)
+    {
+        if(outlineColorFloat.length < 3){
+            return -1;
+        }
+        return ColorHelper.withAlpha(255,ColorHelper.getArgb((int)(outlineColorFloat[0]*255), (int)(outlineColorFloat[1]*255), (int)(outlineColorFloat[2]*255)));
     }
 
     public String toJson() {

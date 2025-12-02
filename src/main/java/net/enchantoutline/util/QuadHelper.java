@@ -29,7 +29,7 @@ public class QuadHelper {
 
                     VertexHelper.setVertexData(vertexData, vertPoses);
 
-                    BakedQuad enchantmentQuad = new BakedQuad(VertexHelper.flip(vertexData), -1, quad.face().getOpposite(), null, false, 100);
+                    BakedQuad enchantmentQuad = new BakedQuad(VertexHelper.flip(vertexData), 0, quad.face().getOpposite(), null, false, 100);
 
                     newQuads.add(enchantmentQuad);
                 }

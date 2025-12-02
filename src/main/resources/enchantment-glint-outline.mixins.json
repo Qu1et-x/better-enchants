@@ -3,7 +3,11 @@
 	"package": "net.enchantoutline.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"ItemRenderState_LayerRenderStateMixin"
+		"ItemRenderState_LayerRenderStateMixin",
+		"WorldRendererMixin",
+		"BufferBuilderStorageMixin",
+		"VertexConsumerProvider_ImmediateMixin",
+		"RenderLayerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

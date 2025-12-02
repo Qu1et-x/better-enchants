@@ -63,4 +63,16 @@ public class Shaders {
                     .texture(RenderLayer.BLOCK_ATLAS_TEXTURE)
                     .build(true)
     );
+
+    public static final RenderLayer ZFIX_CUTOUT_LAYER = RenderLayer.of(
+            "custom_enchants_cutout",
+            786432,
+            true,
+            false,
+            CUTOUT_PIPELINE_DEPTH,
+            RenderLayer.MultiPhaseParameters.builder()
+                    .lightmap(RenderLayer.ENABLE_LIGHTMAP)
+                    .texture(RenderLayer.BLOCK_ATLAS_TEXTURE)
+                    .build(true)
+    );
 }

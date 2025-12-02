@@ -1,14 +1,24 @@
 package net.enchantoutline;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.enchantoutline.config.EnchantmentOutlineConfig;
+import net.enchantoutline.events.BufferBuilderModifyReturnValue;
 import net.enchantoutline.events.RenderItem;
+import net.enchantoutline.events.WorldRenderer;
+import net.enchantoutline.mixin_accessors.RenderLayerAccessor;
+import net.enchantoutline.mixin_accessors.VertexConsumerProvider_ImmediateAccessor;
 import net.enchantoutline.shader.Shaders;
+import net.enchantoutline.util.CustomRenderLayers;
 import net.enchantoutline.util.QuadHelper;
 import net.fabricmc.api.ModInitializer;
 
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.client.render.item.ItemRenderState;
 import net.minecraft.client.render.model.BakedQuad;
+import net.minecraft.client.util.BufferAllocator;
 import net.minecraft.util.ActionResult;
+import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,6 +26,8 @@ import java.io.BufferedReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
+import java.util.SequencedMap;
 
 public class EnchantmentGlintOutline implements ModInitializer {
 	public static final String MOD_ID = "enchantment-glint-outline";
@@ -25,11 +37,27 @@ public class EnchantmentGlintOutline implements ModInitializer {
 	// That way, it's clear which mod wrote info, warnings, and errors.
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+	public static final CustomRenderLayers GLINT_LAYERS = new CustomRenderLayers();
+	public static final CustomRenderLayers COLOR_LAYERS = new CustomRenderLayers();
+	public static final CustomRenderLayers ZFIX_LAYERS = new CustomRenderLayers();
+
 	private static EnchantmentOutlineConfig config;
 
 	public static EnchantmentOutlineConfig getConfig()
 	{
 		return config;
+	}
+
+	private static RenderLayer getTargetEnchantGlintLayer(){
+		return RenderLayer.getArmorEntityGlint();
+	}
+
+	private static RenderLayer getTargetEnchantColorLayer(){
+		return TexturedRenderLayers.getEntitySolid();
+	}
+
+	private static RenderLayer getTargetEnchantZFixLayer(){
+		return RenderLayer.getWaterMask();
 	}
 
 	@Override
@@ -38,11 +66,19 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		// However, some things (like resources) may still be uninitialized.
 		// Proceed with mild caution.
 		loadConfig();
+		initLayers();
 
 		//called before non-special item is rendered. used for render solid (by having no Z write, while Z test but rendering before the item is Rendered)
 		RenderItem.Normal.Callback.EVENT.register((receiver, orderedRenderCommandQueue, matrixStack, itemDisplayContext, light, overlay, outlineColors, tintLayers, quads, renderLayer, glintType) -> {
 			if(config.isEnabled()){
+				if(config.shouldRenderSolid()) {
+					if (glintType != ItemRenderState.Glint.NONE) {
+						int[] tint = {config.getOutlineColorAsInt(config.getOutlineColor())};
 
+						List<BakedQuad> thickenedQuads = QuadHelper.thicken(quads, 0.02f);
+						orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tint, thickenedQuads, Shaders.COLOR_CUTOUT_LAYER, ItemRenderState.Glint.NONE);
+					}
+				}
 			}
 			return ActionResult.PASS;
 		});
@@ -52,11 +88,88 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			if(config.isEnabled()){
 				if(glintType != ItemRenderState.Glint.NONE){
 					List<BakedQuad> thickenedQuads = QuadHelper.thicken(quads, 0.02f);
-					orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, light, overlay, outlineColors, tintLayers, thickenedQuads, Shaders.GLINT_CUTOUT_LAYER, glintType);
+					if(!config.shouldRenderSolid()){
+						orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tintLayers, thickenedQuads, Shaders.GLINT_CUTOUT_LAYER, glintType);
+					}
+					else{
+						//finally fixes the things rendering behind other things when they shouldn't be. Used for RenderSolid
+						orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tintLayers, thickenedQuads, Shaders.ZFIX_CUTOUT_LAYER, ItemRenderState.Glint.NONE);
+					}
 				}
 			}
 			return ActionResult.PASS;
 		});
+
+		WorldRenderer.RenderLayer.Callback.EVENT.register((receiver, renderLayer) -> {
+
+			if(renderLayer.equals(getTargetEnchantColorLayer())){
+				for(var customLayer : COLOR_LAYERS.renderLayers())
+				{
+					if(((RenderLayerAccessor)customLayer).enchantOutline$shouldUseLayerBuffer()) {
+						receiver.draw(customLayer);
+					}
+				}
+			}
+			return ActionResult.PASS;
+		});
+
+		WorldRenderer.RenderLayer.Post.EVENT.register(((receiver, renderLayer) -> {
+			if(renderLayer.equals(getTargetEnchantColorLayer())){
+
+			}
+			return ActionResult.PASS;
+		}));
+
+		//VertexConsumerProvider contains a setDirty method used to track if we need to update it's return value or not.
+		BufferBuilderModifyReturnValue.EVENT.register((original) -> {
+			VertexConsumerProvider_ImmediateAccessor accessor = (VertexConsumerProvider_ImmediateAccessor)original;
+
+			var enchantGlintLayer = getTargetEnchantGlintLayer();
+			var enchantColorLayer = getTargetEnchantColorLayer();
+			var enchantZFixLayer = getTargetEnchantZFixLayer();
+
+			var buffers = accessor.enchantOutline$getLayerBuffers();
+			if(!Objects.equals(accessor.enchantOutline$getDirty(GLINT_LAYERS), GLINT_LAYERS.getDirty()) && buffers.containsKey(enchantGlintLayer) || !Objects.equals(accessor.enchantOutline$getDirty(COLOR_LAYERS), COLOR_LAYERS.getDirty()) && buffers.containsKey(enchantColorLayer) || !Objects.equals(accessor.enchantOutline$getDirty(ZFIX_LAYERS), ZFIX_LAYERS.getDirty()) && buffers.containsKey(enchantZFixLayer)){
+				accessor.enchantOutline$setDirty(GLINT_LAYERS, GLINT_LAYERS.getDirty());
+				accessor.enchantOutline$setDirty(COLOR_LAYERS, COLOR_LAYERS.getDirty());
+				accessor.enchantOutline$setDirty(ZFIX_LAYERS, ZFIX_LAYERS.getDirty());
+
+				SequencedMap<RenderLayer, BufferAllocator> clonedBuffer = new Object2ObjectLinkedOpenHashMap<>(buffers);
+				buffers.clear();
+				for(var set : clonedBuffer.entrySet()) {
+					if(!GLINT_LAYERS.containsRenderLayer(set.getKey()) && !COLOR_LAYERS.containsRenderLayer(set.getKey()) && !ZFIX_LAYERS.containsRenderLayer(set.getKey())) {
+						if(set.getKey() == enchantColorLayer) {
+							for(RenderLayer layer : COLOR_LAYERS.renderLayers()) {
+								if(((RenderLayerAccessor)layer).enchantOutline$shouldUseLayerBuffer()){
+									buffers.put(layer, new BufferAllocator(layer.getExpectedBufferSize()));
+								}
+							}
+						}
+						if(set.getKey() == enchantGlintLayer) {
+							for(RenderLayer layer : GLINT_LAYERS.renderLayers())
+							{
+								buffers.put(layer, new BufferAllocator(layer.getExpectedBufferSize()));
+							}
+						}
+						if(set.getKey() == enchantZFixLayer){
+							for(RenderLayer layer : ZFIX_LAYERS.renderLayers())
+							{
+								buffers.put(layer, new BufferAllocator(layer.getExpectedBufferSize()));
+							}
+						}
+						buffers.put(set.getKey(), set.getValue());
+					}
+				}
+			}
+
+			return null;
+		});
+	}
+
+	private static void initLayers(){
+		GLINT_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID,"cutoutlayer"), Shaders.GLINT_CUTOUT_LAYER);
+		COLOR_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID,"cutoutlayer"), Shaders.COLOR_CUTOUT_LAYER);
+		ZFIX_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID, "cutoutlayer"), Shaders.ZFIX_CUTOUT_LAYER);
 	}
 
 	private static void loadConfig() {
