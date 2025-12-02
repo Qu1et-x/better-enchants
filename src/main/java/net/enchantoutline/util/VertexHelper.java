@@ -1,5 +1,6 @@
 package net.enchantoutline.util;
 
+import org.joml.Vector2f;
 import org.joml.Vector3f;
 
 public class VertexHelper {

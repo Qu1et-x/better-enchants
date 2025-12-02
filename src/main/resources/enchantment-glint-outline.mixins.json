@@ -7,7 +7,13 @@
 		"WorldRendererMixin",
 		"BufferBuilderStorageMixin",
 		"VertexConsumerProvider_ImmediateMixin",
-		"RenderLayerMixin"
+		"RenderLayerMixin",
+		"ModelPart_CuboidMixin",
+		"ModelPartMixin",
+		"OrderedRenderCommandQueueImplMixin",
+		"RenderLayerMultiPhaseAccessor",
+		"MultiPhaseParametersMixin",
+		"RenderPhase_TextureAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1
