@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "better-enchants",
+	"version": "${version}",
+	"name": "Better Enchantment Glint",
+	"description": "Adds a fancy outline to enchanted items. Works with resource packs and shaders. Sodium compatible",
+	"authors": [
+		"Da0neDatGotAway"
+	],
+	"contributors": [
+		"yo314159at",
+		"Igrium"
+	],
+	"license": "CC0-1.0",
+	"icon": "assets/enchantment-glint-outline/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"net.enchantoutline.EnchantmentGlintOutline"
+		]
+	},
+	"mixins": [
+		"enchantment-glint-outline.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.18.1",
+		"minecraft": "~1.21.9",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*",
+		"cloth-config": "*"
+	}
+}
