@@ -2,16 +2,14 @@ package net.enchantoutline;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.enchantoutline.config.EnchantmentOutlineConfig;
-import net.enchantoutline.events.BufferBuilderModifyReturnValue;
-import net.enchantoutline.events.ImmediateRenderCurrentLayer;
-import net.enchantoutline.events.RenderQuads;
-import net.enchantoutline.events.WorldRenderer;
+import net.enchantoutline.events.*;
 import net.enchantoutline.mixin.RenderLayerMultiPhaseAccessor;
 import net.enchantoutline.mixin.RenderPhase_TextureAccessor;
 import net.enchantoutline.mixin_accessors.*;
+import net.enchantoutline.model.HijackedModel;
 import net.enchantoutline.shader.Shaders;
 import net.enchantoutline.util.CustomRenderLayers;
-import net.enchantoutline.util.ModelPartHelper;
+import net.enchantoutline.util.ModelHelper;
 import net.enchantoutline.util.QuadHelper;
 import net.fabricmc.api.ModInitializer;
 
@@ -24,6 +22,7 @@ import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.util.BufferAllocator;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,7 +98,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 						RenderLayer colorLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier), Shaders.COLOR_CUTOUT_LAYER);
 						RenderLayer zFixLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(ZFIX_LAYERS, Shaders::createZFixRenderLayer, identifier), Shaders.ZFIX_CUTOUT_LAYER);
 
-						ModelPart thickModelPart = ModelPartHelper.thickenedModelPart(part, 0.02f);
+						ModelPart thickModelPart = ModelHelper.thickenedModelPart(part, 0.02f);
 
 						//render call
 						OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
@@ -113,7 +112,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			return ActionResult.PASS;
 		});
 
-		//called right after special item is rendered. used for render glint (by having Z write and Z test, but no color write after rendering the item, in other words write to the depth buffer)
+		//called right after normal item is rendered. used for render glint (by having Z write and Z test, but no color write after rendering the item, in other words write to the depth buffer)
 		RenderQuads.Normal.Post.EVENT.register((receiver, orderedRenderCommandQueue, matrixStack, itemDisplayContext, light, overlay, outlineColors, tintLayers, quads, renderLayer, glintType) -> {
 			if(config.isEnabled()){
 				if(glintType != ItemRenderState.Glint.NONE){
@@ -125,6 +124,28 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			}
 			return ActionResult.PASS;
 		});
+
+		EquipmentRendererQueueEnchantedCallback.EVENT.register(((receiver, texture, model, s, matrixStack, renderLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand) -> {
+			//I can build this using the current renderLayer the model class is surprisingly simple. It just is made of a model part which I already am able to render an outline for. just build a new model every frame and we should be set
+			if(config.isEnabled()){
+				int tint = config.getOutlineColorAsInt(config.getOutlineColor());
+
+				Function<Identifier, RenderLayer> renderLayerFactory = (identifier) -> {
+					RenderLayer layer = Shaders.COLOR_CUTOUT_LAYER;
+					RenderLayer generatedLayer = getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier);
+					if(generatedLayer != null){
+						return generatedLayer;
+					}
+					return layer;
+				};
+				RenderLayer outLayer = renderLayerFactory.apply(texture);
+				HijackedModel thickModel = ModelHelper.getThickenedModel(model, renderLayerFactory, 0.02f);
+
+				receiver.submitModel(thickModel, s, matrixStack, outLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
+			}
+
+			return ActionResult.PASS;
+		}));
 
 		WorldRenderer.RenderLayer.Callback.EVENT.register((receiver, renderLayer) -> {
 
@@ -245,6 +266,12 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		ZFIX_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID, "cutoutlayer"), Shaders.ZFIX_CUTOUT_LAYER);
 	}
 
+	/*public static void renderModelWithGlint(RenderCommandQueue receiver, Model model, Object s, MatrixStack matrixStack, RenderLayer renderLayer, int light, int overlay, int tintColor, @Nullable Sprite sprite, int outlineColor, @Nullable ModelCommandRenderer.CrumblingOverlayCommand crumblingOverlayCommand){
+
+
+	}*/
+
+	@Nullable
 	public static RenderLayer getOrCreateRenderLayer(CustomRenderLayers customRenderLayers, Function<Identifier, RenderLayer> layerCreationFunction, Identifier identifier){
 		RenderLayer output = customRenderLayers.getCustomRenderLayer(identifier);
 		if(output != null)

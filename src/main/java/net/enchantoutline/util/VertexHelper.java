@@ -1,6 +1,9 @@
 package net.enchantoutline.util;
 
+import net.minecraft.client.util.math.MatrixStack;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 public class VertexHelper {
     public static Vector3f[] getVertexPos(int[] vertexData)
@@ -165,6 +168,15 @@ public class VertexHelper {
             vertPoses[vertInterator] = vert;
         }
         return vertPoses;
+    }
+
+    public static Vector3f transformVector(MatrixStack matrices, Vector3f vec) {
+        Matrix4f mat = matrices.peek().getPositionMatrix();
+
+        Vector4f vec4 = new Vector4f(vec.x(), vec.y(), vec.z(), 1.0f);
+        mat.transform(vec4);
+
+        return new Vector3f(vec4.x(), vec4.y(), vec4.z());
     }
 
     /**
