@@ -28,10 +28,7 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.SequencedMap;
+import java.util.*;
 
 public class EnchantmentGlintOutline implements ModInitializer {
 	public static final String MOD_ID = "enchantment-glint-outline";
@@ -90,36 +87,56 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		//the other half of render solid for special items. They should either both use the renderCommandQueue or both avoid it though, this mix is not making me happy.
 		RenderQuads.Model.ModelPart.EVENT.register((receiver, part, matrices, renderLayer, light, overlay, sprite, sheeted, hasGlint, tintedColor, crumblingOverlay, i) -> {
 			if(config.isEnabled()){
-				if(config.shouldRenderSolid()) {
-					int[] tint = {config.getOutlineColorAsInt(config.getOutlineColor())};
+				if(hasGlint){
+					if(config.shouldRenderSolid()) {
+						int tint = config.getOutlineColorAsInt(config.getOutlineColor());
 
-					ModelPartAccessor modelPartAccessor = (ModelPartAccessor)(Object)part;
-					List<ModelPart.Cuboid> cuboids = modelPartAccessor.enchantOutline$getCuboids();
-					ModelPart thickModelPart = new ModelPart(QuadHelper.thickenCuboid(cuboids, 0.02f), modelPartAccessor.enchantOutline$getChildren());
-					thickModelPart.setDefaultTransform(part.getDefaultTransform());
-					thickModelPart.setTransform(thickModelPart.getTransform());
-
-					OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
-					commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
-
-					RenderLayer layer = Shaders.COLOR_CUTOUT_LAYER;
-					if(renderLayer instanceof RenderLayer.MultiPhase phase){
-						RenderLayer.MultiPhaseParameters params = ((RenderLayerMultiPhaseAccessor)(Object)phase).getPhases();
-						if(params != null){
-							RenderPhase.TextureBase textureBase = ((MultiPhaseParametersAccessor)(Object)params).enchantOutline$getTexture();
-							if(textureBase != null){
-								Optional<Identifier> texture = ((RenderPhase_TextureAccessor)textureBase).invokeGetId();
-								if(texture.isPresent()){
-									RenderLayer newLayer = getOrCreateColorRenderLayer(texture.orElseThrow());
-									if(newLayer != null){
-										layer = newLayer;
+						//get render layer
+						RenderLayer layer = Shaders.COLOR_CUTOUT_LAYER;
+						if(renderLayer instanceof RenderLayer.MultiPhase phase){
+							RenderLayer.MultiPhaseParameters params = ((RenderLayerMultiPhaseAccessor)(Object)phase).getPhases();
+							if(params != null){
+								RenderPhase.TextureBase textureBase = ((MultiPhaseParametersAccessor)(Object)params).enchantOutline$getTexture();
+								if(textureBase != null){
+									Optional<Identifier> texture = ((RenderPhase_TextureAccessor)textureBase).invokeGetId();
+									if(texture.isPresent()){
+										RenderLayer newLayer = getOrCreateColorRenderLayer(texture.orElseThrow());
+										if(newLayer != null){
+											layer = newLayer;
+										}
 									}
 								}
 							}
 						}
+
+						//get thick
+						ModelPartAccessor modelPartAccessor = (ModelPartAccessor)(Object)part;
+						List<ModelPart.Cuboid> cuboids = modelPartAccessor.enchantOutline$getCuboids();
+
+						List<ModelPart.Cuboid> thickCuboids = new ArrayList<>();
+						for(var cuboid: cuboids){
+							ModelPart.Quad[] cubeQuads = ((ModelPart_CuboidAccessor)cuboid).enchantOutline$getSides();
+							List<BakedQuad> bakedQuads = QuadHelper.modelPartQuadToBakedQuad(cubeQuads);
+
+							List<BakedQuad> thickQuads = QuadHelper.thickenQuad(bakedQuads, 0.2f);
+							List<ModelPart.Cuboid> thickFaceCuboid = QuadHelper.bakedQuadToCuboid(thickQuads);
+							//LOGGER.info("baked: {}, thick: {}, cubes: {}, from: {}",bakedQuads,thickQuads, thickFaceCuboid, cubeQuads);
+							thickCuboids.addAll(thickFaceCuboid);
+						}
+
+						ModelPart thickModelPart = new ModelPart(thickCuboids, modelPartAccessor.enchantOutline$getChildren());
+						thickModelPart.setDefaultTransform(part.getDefaultTransform());
+						thickModelPart.setTransform(thickModelPart.getTransform());
+
+						//render call
+						OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
+						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
+						matrices.push();
+						//matrices.translate(1,1,1);
+						receiver.submitModelPart(thickModelPart, matrices, layer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						matrices.pop();
+						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
 					}
-					receiver.submitModelPart(thickModelPart, matrices, layer, 0, 0, sprite, sheeted, hasGlint, tintedColor, crumblingOverlay, i);
-					commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
 				}
 			}
 			return ActionResult.PASS;

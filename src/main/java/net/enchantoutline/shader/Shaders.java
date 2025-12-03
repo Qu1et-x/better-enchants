@@ -3,6 +3,7 @@ package net.enchantoutline.shader;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.enchantoutline.EnchantmentGlintOutline;
+import net.enchantoutline.mixin_accessors.RenderLayerAccessor;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderPhase;
@@ -133,7 +134,7 @@ public class Shaders {
     );
 
     public static RenderLayer createColorRenderLayer(Identifier texture) {
-        return RenderLayer.of(
+        RenderLayer layer = RenderLayer.of(
                 "custom_enchants_model",
                 786432,
                 true,
@@ -144,5 +145,7 @@ public class Shaders {
                         .lightmap(RenderLayer.ENABLE_LIGHTMAP)
                         .overlay(RenderLayer.DISABLE_OVERLAY_COLOR)
                         .build(true));
+        //((RenderLayerAccessor)layer).enchantOutline$setShouldUseLayerBuffer(false);
+        return layer;
     }
 }
