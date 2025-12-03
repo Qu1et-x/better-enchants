@@ -10,6 +10,7 @@ import net.enchantoutline.mixin.RenderPhase_TextureAccessor;
 import net.enchantoutline.mixin_accessors.*;
 import net.enchantoutline.shader.Shaders;
 import net.enchantoutline.util.CustomRenderLayers;
+import net.enchantoutline.util.ModelPartHelper;
 import net.enchantoutline.util.QuadHelper;
 import net.fabricmc.api.ModInitializer;
 
@@ -109,32 +110,12 @@ public class EnchantmentGlintOutline implements ModInitializer {
 							}
 						}
 
-						//get thick
-						ModelPartAccessor modelPartAccessor = (ModelPartAccessor)(Object)part;
-						List<ModelPart.Cuboid> cuboids = modelPartAccessor.enchantOutline$getCuboids();
-
-						List<ModelPart.Cuboid> thickCuboids = new ArrayList<>();
-						for(var cuboid: cuboids){
-							ModelPart.Quad[] cubeQuads = ((ModelPart_CuboidAccessor)cuboid).enchantOutline$getSides();
-							List<BakedQuad> bakedQuads = QuadHelper.modelPartQuadToBakedQuad(cubeQuads);
-
-							List<BakedQuad> thickQuads = QuadHelper.thickenQuad(bakedQuads, 0.2f);
-							List<ModelPart.Cuboid> thickFaceCuboid = QuadHelper.bakedQuadToCuboid(thickQuads);
-							//LOGGER.info("baked: {}, thick: {}, cubes: {}, from: {}",bakedQuads,thickQuads, thickFaceCuboid, cubeQuads);
-							thickCuboids.addAll(thickFaceCuboid);
-						}
-
-						ModelPart thickModelPart = new ModelPart(thickCuboids, modelPartAccessor.enchantOutline$getChildren());
-						thickModelPart.setDefaultTransform(part.getDefaultTransform());
-						thickModelPart.setTransform(thickModelPart.getTransform());
+						ModelPart thickModelPart = ModelPartHelper.thickenedModelPart(part, 0.02f);
 
 						//render call
 						OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
-						matrices.push();
-						//matrices.translate(1,1,1);
 						receiver.submitModelPart(thickModelPart, matrices, layer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
-						matrices.pop();
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
 					}
 				}
