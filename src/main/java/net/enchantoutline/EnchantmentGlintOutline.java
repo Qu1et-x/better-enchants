@@ -3,6 +3,7 @@ package net.enchantoutline;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.enchantoutline.config.EnchantmentOutlineConfig;
 import net.enchantoutline.events.BufferBuilderModifyReturnValue;
+import net.enchantoutline.events.ImmediateRenderCurrentLayer;
 import net.enchantoutline.events.RenderQuads;
 import net.enchantoutline.events.WorldRenderer;
 import net.enchantoutline.mixin.RenderLayerMultiPhaseAccessor;
@@ -30,6 +31,7 @@ import java.io.BufferedReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Function;
 
 public class EnchantmentGlintOutline implements ModInitializer {
 	public static final String MOD_ID = "enchantment-glint-outline";
@@ -79,6 +81,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 
 						List<BakedQuad> thickenedQuads = QuadHelper.thickenQuad(quads, 0.02f);
 						orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tint, thickenedQuads, Shaders.COLOR_CUTOUT_LAYER, ItemRenderState.Glint.NONE);
+						orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tintLayers, thickenedQuads, Shaders.ZFIX_CUTOUT_LAYER, ItemRenderState.Glint.NONE);
 					}
 				}
 			}
@@ -93,29 +96,16 @@ public class EnchantmentGlintOutline implements ModInitializer {
 						int tint = config.getOutlineColorAsInt(config.getOutlineColor());
 
 						//get render layer
-						RenderLayer layer = Shaders.COLOR_CUTOUT_LAYER;
-						if(renderLayer instanceof RenderLayer.MultiPhase phase){
-							RenderLayer.MultiPhaseParameters params = ((RenderLayerMultiPhaseAccessor)(Object)phase).getPhases();
-							if(params != null){
-								RenderPhase.TextureBase textureBase = ((MultiPhaseParametersAccessor)(Object)params).enchantOutline$getTexture();
-								if(textureBase != null){
-									Optional<Identifier> texture = ((RenderPhase_TextureAccessor)textureBase).invokeGetId();
-									if(texture.isPresent()){
-										RenderLayer newLayer = getOrCreateColorRenderLayer(texture.orElseThrow());
-										if(newLayer != null){
-											layer = newLayer;
-										}
-									}
-								}
-							}
-						}
+						RenderLayer colorLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier), Shaders.COLOR_CUTOUT_LAYER);
+						RenderLayer zFixLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(ZFIX_LAYERS, Shaders::createZFixRenderLayer, identifier), Shaders.ZFIX_CUTOUT_LAYER);
 
 						ModelPart thickModelPart = ModelPartHelper.thickenedModelPart(part, 0.02f);
 
 						//render call
 						OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
-						receiver.submitModelPart(thickModelPart, matrices, layer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						receiver.submitModelPart(thickModelPart, matrices, colorLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						receiver.submitModelPart(thickModelPart, matrices, zFixLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
 					}
 				}
@@ -127,13 +117,9 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		RenderQuads.Normal.Post.EVENT.register((receiver, orderedRenderCommandQueue, matrixStack, itemDisplayContext, light, overlay, outlineColors, tintLayers, quads, renderLayer, glintType) -> {
 			if(config.isEnabled()){
 				if(glintType != ItemRenderState.Glint.NONE){
-					List<BakedQuad> thickenedQuads = QuadHelper.thickenQuad(quads, 0.02f);
 					if(!config.shouldRenderSolid()){
+						List<BakedQuad> thickenedQuads = QuadHelper.thickenQuad(quads, 0.02f);
 						orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tintLayers, thickenedQuads, Shaders.GLINT_CUTOUT_LAYER, glintType);
-					}
-					else{
-						//finally fixes the things rendering behind other things when they shouldn't be. Used for RenderSolid
-						orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tintLayers, thickenedQuads, Shaders.ZFIX_CUTOUT_LAYER, ItemRenderState.Glint.NONE);
 					}
 				}
 			}
@@ -153,12 +139,35 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			return ActionResult.PASS;
 		});
 
-		WorldRenderer.RenderLayer.Post.EVENT.register(((receiver, renderLayer) -> {
-			if(renderLayer.equals(getTargetEnchantColorLayer())){
-
+		ImmediateRenderCurrentLayer.Before.EVENT.register((receiver, layer) -> {
+			for (RenderLayer renderLayer : ((VertexConsumerProvider_ImmediateAccessor)receiver).enchantOutline$getLayerBuffers().keySet()) {
+				if(((RenderLayerAccessor)renderLayer).enchantOutline$shouldDrawBeforeCustom()){
+					receiver.draw(renderLayer);
+				}
 			}
+
 			return ActionResult.PASS;
-		}));
+		});
+
+		ImmediateRenderCurrentLayer.Before.EVENT.register((receiver, layer) -> {
+			for (RenderLayer renderLayer : ((VertexConsumerProvider_ImmediateAccessor)receiver).enchantOutline$getLayerBuffers().keySet()) {
+				if(((RenderLayerAccessor)renderLayer).enchantOutline$shouldDrawBeforeCustom()){
+					receiver.draw(renderLayer);
+				}
+			}
+
+			return ActionResult.PASS;
+		});
+
+		ImmediateRenderCurrentLayer.After.EVENT.register((receiver, layer) -> {
+			for (RenderLayer renderLayer : ((VertexConsumerProvider_ImmediateAccessor)receiver).enchantOutline$getLayerBuffers().keySet()) {
+				if(((RenderLayerAccessor)renderLayer).enchantOutline$shouldDrawBeforeCustom()){
+					receiver.draw(renderLayer);
+				}
+			}
+
+			return ActionResult.PASS;
+		});
 
 		//VertexConsumerProvider contains a setDirty method used to track if we need to update it's return value or not.
 		BufferBuilderModifyReturnValue.EVENT.register((original) -> {
@@ -188,13 +197,17 @@ public class EnchantmentGlintOutline implements ModInitializer {
 						if(set.getKey() == enchantGlintLayer) {
 							for(RenderLayer layer : GLINT_LAYERS.renderLayers())
 							{
-								buffers.put(layer, new BufferAllocator(layer.getExpectedBufferSize()));
+								if(((RenderLayerAccessor)layer).enchantOutline$shouldUseLayerBuffer()) {
+									buffers.put(layer, new BufferAllocator(layer.getExpectedBufferSize()));
+								}
 							}
 						}
 						if(set.getKey() == enchantZFixLayer){
 							for(RenderLayer layer : ZFIX_LAYERS.renderLayers())
 							{
-								buffers.put(layer, new BufferAllocator(layer.getExpectedBufferSize()));
+								if(((RenderLayerAccessor)layer).enchantOutline$shouldUseLayerBuffer()) {
+									buffers.put(layer, new BufferAllocator(layer.getExpectedBufferSize()));
+								}
 							}
 						}
 						buffers.put(set.getKey(), set.getValue());
@@ -206,20 +219,39 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		});
 	}
 
+	public static RenderLayer getOrCreateRenderLayerRenderLayerWithTexture(RenderLayer fromLayer, Function<Identifier, RenderLayer> layerCreateFunction, RenderLayer fallback){
+		RenderLayer layer = fallback;
+		if(fromLayer instanceof RenderLayer.MultiPhase phase){
+			RenderLayer.MultiPhaseParameters params = ((RenderLayerMultiPhaseAccessor)(Object)phase).getPhases();
+			if(params != null){
+				RenderPhase.TextureBase textureBase = ((MultiPhaseParametersAccessor)(Object)params).enchantOutline$getTexture();
+				if(textureBase != null){
+					Optional<Identifier> texture = ((RenderPhase_TextureAccessor)textureBase).invokeGetId();
+					if(texture.isPresent()){
+						RenderLayer newLayer = layerCreateFunction.apply(texture.orElseThrow());
+						if(newLayer != null){
+							layer = newLayer;
+						}
+					}
+				}
+			}
+		}
+		return layer;
+	}
+
 	private static void initLayers(){
 		GLINT_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID,"cutoutlayer"), Shaders.GLINT_CUTOUT_LAYER);
 		COLOR_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID,"cutoutlayer"), Shaders.COLOR_CUTOUT_LAYER);
 		ZFIX_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID, "cutoutlayer"), Shaders.ZFIX_CUTOUT_LAYER);
 	}
 
-	public static RenderLayer getOrCreateColorRenderLayer(Identifier identifier)
-	{
-		RenderLayer output = COLOR_LAYERS.getCustomRenderLayer(identifier);
+	public static RenderLayer getOrCreateRenderLayer(CustomRenderLayers customRenderLayers, Function<Identifier, RenderLayer> layerCreationFunction, Identifier identifier){
+		RenderLayer output = customRenderLayers.getCustomRenderLayer(identifier);
 		if(output != null)
 		{
 			return output;
 		}
-		return COLOR_LAYERS.addCustomRenderLayer(identifier, Shaders.createColorRenderLayer(identifier));
+		return customRenderLayers.addCustomRenderLayer(identifier, layerCreationFunction.apply(identifier));
 	}
 
 	private static void loadConfig() {

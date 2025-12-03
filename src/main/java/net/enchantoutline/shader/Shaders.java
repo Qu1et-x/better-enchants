@@ -2,6 +2,7 @@ package net.enchantoutline.shader;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.logging.LogUtils;
 import net.enchantoutline.EnchantmentGlintOutline;
 import net.enchantoutline.mixin_accessors.RenderLayerAccessor;
 import net.minecraft.client.gl.RenderPipelines;
@@ -135,7 +136,7 @@ public class Shaders {
 
     public static RenderLayer createColorRenderLayer(Identifier texture) {
         RenderLayer layer = RenderLayer.of(
-                "custom_enchants_model",
+                "custom_color_model",
                 786432,
                 true,
                 false,
@@ -145,7 +146,26 @@ public class Shaders {
                         .lightmap(RenderLayer.ENABLE_LIGHTMAP)
                         .overlay(RenderLayer.DISABLE_OVERLAY_COLOR)
                         .build(true));
-        //((RenderLayerAccessor)layer).enchantOutline$setShouldUseLayerBuffer(false);
+        RenderLayerAccessor accessor = (RenderLayerAccessor)layer;
+        accessor.enchantOutline$setDrawBeforeCustom(true);
+        accessor.enchantOutline$setShouldUseLayerBuffer(false);
+        return layer;
+    }
+
+    public static RenderLayer createZFixRenderLayer(Identifier texture) {
+        RenderLayer layer = RenderLayer.of(
+                "custom_zfix_model",
+                786432,
+                true,
+                false,
+                CUTOUT_PIPELINE_DEPTH,
+                RenderLayer.MultiPhaseParameters.builder()
+                        .texture(new RenderPhase.Texture(texture, false))
+                        .lightmap(RenderLayer.ENABLE_LIGHTMAP)
+                        .build(true));
+        //RenderLayerAccessor accessor = (RenderLayerAccessor)layer;
+        //accessor.enchantOutline$setDrawAfterCustom(true);
+        //accessor.enchantOutline$setShouldUseLayerBuffer(false);
         return layer;
     }
 }

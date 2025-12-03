@@ -8,4 +8,8 @@ public interface RenderLayerAccessor {
      */
     public boolean enchantOutline$shouldUseLayerBuffer();
     public void enchantOutline$setShouldUseLayerBuffer(boolean newUseLayerBuffer);
+    public boolean enchantOutline$shouldDrawBeforeCustom();
+    public boolean enchantOutline$shouldDrawAfterCustom();
+    public void enchantOutline$setDrawBeforeCustom(boolean drawBeforeCustom);
+    public void enchantOutline$setDrawAfterCustom(boolean drawAfterCustom);
 }
