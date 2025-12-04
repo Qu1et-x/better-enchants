@@ -125,7 +125,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			return ActionResult.PASS;
 		});
 
-		EquipmentRendererQueueEnchantedCallback.EVENT.register(((receiver, texture, model, s, matrixStack, renderLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand) -> {
+		EquipmentRendererQueueEnchantedCallback.EVENT.register(((receiver, queueHolder, texture, model, s, matrixStack, renderLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand) -> {
 			//I can build this using the current renderLayer the model class is surprisingly simple. It just is made of a model part which I already am able to render an outline for. just build a new model every frame and we should be set
 			if(config.isEnabled()){
 				int tint = config.getOutlineColorAsInt(config.getOutlineColor());
@@ -139,9 +139,11 @@ public class EnchantmentGlintOutline implements ModInitializer {
 					return layer;
 				};
 				RenderLayer outLayer = renderLayerFactory.apply(texture);
+
+				model.setAngles(s);
 				HijackedModel thickModel = ModelHelper.getThickenedModel(model, renderLayerFactory, 0.02f);
 
-				receiver.submitModel(thickModel, s, matrixStack, outLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
+				queueHolder.getBatchingQueue(-9124657).submitModel(thickModel, s, matrixStack, outLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
 			}
 
 			return ActionResult.PASS;
@@ -159,13 +161,6 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			}
 			return ActionResult.PASS;
 		});
-
-		net.enchantoutline.events.RenderLayer.AreVerticesNotSharedCallback.EVENT.register(((receiver, original) -> {
-			//if(((RenderLayerAccessor)receiver).enchantOutline$shouldDrawBeforeCustom()){
-			//	return false;
-			//}
-			return null;
-		}));
 
 		ImmediateRenderCurrentLayer.Before.EVENT.register((receiver, layer) -> {
 			for (RenderLayer renderLayer : ((VertexConsumerProvider_ImmediateAccessor)receiver).enchantOutline$getLayerBuffers().keySet()) {

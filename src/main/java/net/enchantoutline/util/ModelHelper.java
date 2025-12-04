@@ -28,7 +28,7 @@ public class ModelHelper {
 
     public static ModelPart thickenedModelPart(ModelPart original, float scale){
         //the times 15 is just because it turns out that makes the output about visually equal to the bakedItemRenderer
-        return thickenedModelPart(original, scale * 15, new MatrixStack());
+        return thickenedModelPart(original, scale * 16, new MatrixStack());
     }
 
     //get thick
@@ -37,7 +37,7 @@ public class ModelHelper {
         stack.push();
         stack.translate(original.originX, original.originY, original.originZ);
         if (original.pitch != 0.0F || original.yaw != 0.0F || original.roll != 0.0F) {
-            stack.multiply(new Quaternionf().rotationXYZ(original.pitch, original.yaw, original.roll));
+            stack.multiply(new Quaternionf().rotationYXZ(original.yaw, original.pitch, original.roll));
         }
         if (original.pitch != 0.0F || original.yaw != 0.0F || original.roll != 0.0F) {
             stack.scale(original.xScale, original.yScale, original.zScale);
