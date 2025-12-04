@@ -160,15 +160,12 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			return ActionResult.PASS;
 		});
 
-		ImmediateRenderCurrentLayer.Before.EVENT.register((receiver, layer) -> {
-			for (RenderLayer renderLayer : ((VertexConsumerProvider_ImmediateAccessor)receiver).enchantOutline$getLayerBuffers().keySet()) {
-				if(((RenderLayerAccessor)renderLayer).enchantOutline$shouldDrawBeforeCustom()){
-					receiver.draw(renderLayer);
-				}
-			}
-
-			return ActionResult.PASS;
-		});
+		net.enchantoutline.events.RenderLayer.AreVerticesNotSharedCallback.EVENT.register(((receiver, original) -> {
+			//if(((RenderLayerAccessor)receiver).enchantOutline$shouldDrawBeforeCustom()){
+			//	return false;
+			//}
+			return null;
+		}));
 
 		ImmediateRenderCurrentLayer.Before.EVENT.register((receiver, layer) -> {
 			for (RenderLayer renderLayer : ((VertexConsumerProvider_ImmediateAccessor)receiver).enchantOutline$getLayerBuffers().keySet()) {
@@ -182,7 +179,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 
 		ImmediateRenderCurrentLayer.After.EVENT.register((receiver, layer) -> {
 			for (RenderLayer renderLayer : ((VertexConsumerProvider_ImmediateAccessor)receiver).enchantOutline$getLayerBuffers().keySet()) {
-				if(((RenderLayerAccessor)renderLayer).enchantOutline$shouldDrawBeforeCustom()){
+				if(((RenderLayerAccessor)renderLayer).enchantOutline$shouldDrawAfterCustom()){
 					receiver.draw(renderLayer);
 				}
 			}

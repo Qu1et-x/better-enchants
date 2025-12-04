@@ -1,12 +1,26 @@
 package net.enchantoutline.mixin;
 
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import net.enchantoutline.mixin_accessors.RenderLayerAccessor;
 import net.minecraft.client.render.RenderLayer;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(RenderLayer.class)
 public class RenderLayerMixin implements RenderLayerAccessor {
+
+    @ModifyReturnValue(method = "areVerticesNotShared", at = @At("RETURN"))
+    private boolean enchantOutline$areVerticesNotShared(boolean original){
+        @Nullable Boolean result = net.enchantoutline.events.RenderLayer.AreVerticesNotSharedCallback.EVENT.invoker().getVerticesNotShared((RenderLayer) (Object)this, original);
+
+        if(result != null)
+        {
+            return false;
+        }
+        return original;
+    }
 
     @Unique
     boolean shouldUseLayerBuffer = true;
