@@ -15,7 +15,9 @@
 		"MultiPhaseParametersMixin",
 		"RenderPhase_TextureAccessor",
 		"EquipmentRendererMixin",
-		"RenderPipelineMixin"
+		"RenderPipelineMixin",
+		"ItemModelManagerMixin",
+		"ItemRenderStateMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

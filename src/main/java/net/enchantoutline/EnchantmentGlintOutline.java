@@ -3,6 +3,7 @@ package net.enchantoutline;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.enchantoutline.config.EnchantmentOutlineConfig;
+import net.enchantoutline.config.ItemOverride;
 import net.enchantoutline.events.*;
 import net.enchantoutline.mixin.RenderLayerMultiPhaseAccessor;
 import net.enchantoutline.mixin.RenderPhase_TextureAccessor;
@@ -21,6 +22,8 @@ import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.client.render.item.ItemRenderState;
 import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.util.BufferAllocator;
+import net.minecraft.item.Item;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -80,16 +83,29 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		loadConfig();
 		initLayers();
 
-		//called before non-special item is rendered. used for render solid (by having no Z write, while Z test but rendering before the item is Rendered)
+		//---------- Renderer Calls ----------
+
+		//called before non-special item is rendered.
 		RenderQuads.Normal.Callback.EVENT.register((receiver, orderedRenderCommandQueue, matrixStack, itemDisplayContext, light, overlay, outlineColors, tintLayers, quads, renderLayer, glintType) -> {
 			if(config.isEnabled()){
-				if(config.shouldRenderSolid()) {
-					if (glintType != ItemRenderState.Glint.NONE) {
-						int[] tint = {config.getOutlineColorAsInt(config.getOutlineColor())};
+				if (glintType != ItemRenderState.Glint.NONE) {
+					@Nullable ItemOverride override = getItemOverrideFromLayerRenderState(receiver);
+					if(override == null || override.shouldRender()){
+						if(config.getRenderSolidOverrideOrDefault(override)) {
+							//render solid (by having no Z write, while Z test but rendering before the item is Rendered)
 
-						List<BakedQuad> thickenedQuads = QuadHelper.thickenQuad(quads, 0.02f);
-						orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tint, thickenedQuads, Shaders.COLOR_CUTOUT_LAYER, ItemRenderState.Glint.NONE);
-						orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tintLayers, thickenedQuads, Shaders.ZFIX_CUTOUT_LAYER, ItemRenderState.Glint.NONE);
+							int[] tint = {config.getOutlineColorAsInt(config.getOutlineColorOverrideOrDefault(override))};
+
+							List<BakedQuad> thickenedQuads = QuadHelper.thickenQuad(quads, 0.02f);
+							orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tint, thickenedQuads, Shaders.COLOR_CUTOUT_LAYER, ItemRenderState.Glint.NONE);
+							orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tintLayers, thickenedQuads, Shaders.ZFIX_CUTOUT_LAYER, ItemRenderState.Glint.NONE);
+
+						}
+						else{
+							//render glint (by having Z write and Z test, but no color write after rendering the item, in other words write to the depth buffer)
+							List<BakedQuad> thickenedQuads = QuadHelper.thickenQuad(quads, 0.02f);
+							orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tintLayers, thickenedQuads, Shaders.GLINT_CUTOUT_LAYER, glintType);
+						}
 					}
 				}
 			}
@@ -126,19 +142,6 @@ public class EnchantmentGlintOutline implements ModInitializer {
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
 						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickModelPart, matrices, glintLayer, Integer.MAX_VALUE, 0, sprite, sheeted, true, tintedColor, crumblingOverlay, i);
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
-					}
-				}
-			}
-			return ActionResult.PASS;
-		});
-
-		//called right after normal item is rendered. used for render glint (by having Z write and Z test, but no color write after rendering the item, in other words write to the depth buffer)
-		RenderQuads.Normal.Post.EVENT.register((receiver, orderedRenderCommandQueue, matrixStack, itemDisplayContext, light, overlay, outlineColors, tintLayers, quads, renderLayer, glintType) -> {
-			if(config.isEnabled()){
-				if(glintType != ItemRenderState.Glint.NONE){
-					if(!config.shouldRenderSolid()){
-						List<BakedQuad> thickenedQuads = QuadHelper.thickenQuad(quads, 0.02f);
-						orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tintLayers, thickenedQuads, Shaders.GLINT_CUTOUT_LAYER, glintType);
 					}
 				}
 			}
@@ -188,6 +191,10 @@ public class EnchantmentGlintOutline implements ModInitializer {
 
 			return ActionResult.PASS;
 		}));
+
+		//---------- End Render Calls ----------
+
+		//---------- Render Layer Order ----------
 
 		WorldRenderer.RenderLayer.Callback.EVENT.register((receiver, renderLayer) -> {
 
@@ -280,6 +287,35 @@ public class EnchantmentGlintOutline implements ModInitializer {
 
 			return null;
 		});
+		//--------- End Render Layer Order ----------
+
+		//---------- Item Type Storage ----------
+		ItemModelManagerUpdateModelCallback.EVENT.register(((receiver, model, itemRenderState, itemStack, itemModelManager, itemDisplayContext, clientWorld, heldItemContext, seed) -> {
+			((ItemRenderStateAccessor)itemRenderState).enchantOutline$setItemRendered(itemStack.getItem());
+
+			return ActionResult.PASS;
+		}));
+
+		ItemRenderStateRenderLayerCallback.EVENT.register(((receiver, layerRenderState, matrices, orderedRenderCommandQueue, light, overlay, i) -> {
+			((ItemRenderState_LayerRenderStateAccessor)layerRenderState).enchantOutline$setOwningItemRenderState(receiver);
+
+			return ActionResult.PASS;
+		}));
+		//---------- End Item Type Storage ----------
+	}
+
+	@Nullable ItemOverride getItemOverrideFromLayerRenderState(ItemRenderState.LayerRenderState layerRenderState){
+		@Nullable ItemRenderState owningState = ((ItemRenderState_LayerRenderStateAccessor)layerRenderState).enchantOutline$getOwningRenderState();
+		if(owningState != null){
+			@Nullable Item renderedItem = ((ItemRenderStateAccessor)owningState).enchantOutline$getItemRendered();
+			if(renderedItem != null){
+				Identifier itemId = Registries.ITEM.getId(renderedItem);
+				if(itemId != null){
+					return config.getItemOverride(itemId.toString());
+				}
+			}
+		}
+		return null;
 	}
 
 	public static boolean isRenderLayerDoubleSided(RenderLayer renderLayer){
@@ -317,11 +353,6 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		COLOR_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID,"cutoutlayer"), Shaders.COLOR_CUTOUT_LAYER);
 		ZFIX_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID, "cutoutlayer"), Shaders.ZFIX_CUTOUT_LAYER);
 	}
-
-	/*public static void renderModelWithGlint(RenderCommandQueue receiver, Model model, Object s, MatrixStack matrixStack, RenderLayer renderLayer, int light, int overlay, int tintColor, @Nullable Sprite sprite, int outlineColor, @Nullable ModelCommandRenderer.CrumblingOverlayCommand crumblingOverlayCommand){
-
-
-	}*/
 
 	@Nullable
 	public static RenderLayer getOrCreateRenderLayer(CustomRenderLayers customRenderLayers, Function<Identifier, RenderLayer> layerCreationFunction, Identifier identifier){
