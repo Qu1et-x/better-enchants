@@ -146,23 +146,12 @@ public class EnchantmentGlintOutline implements ModInitializer {
 					}
 					return layer;
 				};
-				Function<Identifier, RenderLayer> zFixLayerFactory = (identifier) -> {
-					RenderLayer layer = Shaders.ZFIX_CUTOUT_LAYER;
-					RenderLayer generatedColorLayer = getOrCreateRenderLayer(ZFIX_LAYERS, Shaders::createZFixRenderLayer, identifier);
-					if(generatedColorLayer != null){
-						return generatedColorLayer;
-					}
-					return layer;
-				};
 				RenderLayer colorLayer = colorLayerFactory.apply(texture);
-				RenderLayer zFixLayer = colorLayerFactory.apply(texture);
 
 				model.setAngles(s);
 				HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, colorLayerFactory, 0.02f);
-				HijackedModel thickZFixModel = ModelHelper.getThickenedModel(model, zFixLayerFactory, 0.02f);
 
 				queueHolder.getBatchingQueue(getSolidBatchingQueue()).submitModel(thickColorModel, s, matrixStack, colorLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
-				queueHolder.getBatchingQueue(getZFixBatchingQueue()).submitModel(thickZFixModel, s, matrixStack, zFixLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
 			}
 
 			return ActionResult.PASS;
