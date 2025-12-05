@@ -196,10 +196,25 @@ public class EnchantmentGlintOutline implements ModInitializer {
 
 		//---------- Render Layer Order ----------
 
+		//solid ordering in WorldRenderer
 		WorldRenderer.RenderLayer.Callback.EVENT.register((receiver, renderLayer) -> {
 
 			if(renderLayer.equals(getTargetEnchantColorLayer())){
 				for(var customLayer : COLOR_LAYERS.renderLayers())
+				{
+					if(((RenderLayerAccessor)customLayer).enchantOutline$shouldUseLayerBuffer()) {
+						receiver.draw(customLayer);
+					}
+				}
+			}
+			return ActionResult.PASS;
+		});
+
+		//glint ordering in world renderer
+		WorldRenderer.RenderLayer.Callback.EVENT.register((receiver, renderLayer) -> {
+
+			if(renderLayer.equals(getTargetEnchantGlintLayer())){
+				for(var customLayer : GLINT_LAYERS.renderLayers())
 				{
 					if(((RenderLayerAccessor)customLayer).enchantOutline$shouldUseLayerBuffer()) {
 						receiver.draw(customLayer);
