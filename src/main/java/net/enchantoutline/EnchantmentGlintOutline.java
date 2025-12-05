@@ -1,5 +1,6 @@
 package net.enchantoutline;
 
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.enchantoutline.config.EnchantmentOutlineConfig;
 import net.enchantoutline.events.*;
@@ -99,10 +100,11 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		RenderQuads.Model.ModelPart.EVENT.register((receiver, part, matrices, renderLayer, light, overlay, sprite, sheeted, hasGlint, tintedColor, crumblingOverlay, i) -> {
 			if(config.isEnabled()){
 				if(hasGlint){
-					ModelPart thickModelPart = ModelHelper.thickenedModelPart(part, 0.02f);
 					if(config.shouldRenderSolid()) {
 						int tint = config.getOutlineColorAsInt(config.getOutlineColor());
 
+						boolean isDoubleSided = isRenderLayerDoubleSided(renderLayer);
+						ModelPart thickColorModelPart = ModelHelper.thickenedModelPart(part, isDoubleSided, 0.02f);
 						//get render layer
 						RenderLayer colorLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier), Shaders.COLOR_CUTOUT_LAYER);
 						RenderLayer zFixLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(ZFIX_LAYERS, Shaders::createZFixRenderLayer, identifier), Shaders.ZFIX_CUTOUT_LAYER);
@@ -110,17 +112,20 @@ public class EnchantmentGlintOutline implements ModInitializer {
 						//render call
 						OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
-						receiver.getBatchingQueue(getColorBatchingQueue()).submitModelPart(thickModelPart, matrices, colorLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
-						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickModelPart, matrices, zFixLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						receiver.getBatchingQueue(getColorBatchingQueue()).submitModelPart(thickColorModelPart, matrices, colorLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickColorModelPart, matrices, zFixLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
 					}
 					else{
+						ModelPart thickGlintModelPart = ModelHelper.thickenedModelPart(part, false, 0.02f);
+
+						//get render layer
 						RenderLayer glintLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(GLINT_LAYERS, Shaders::createGlintRenderLayer, identifier), Shaders.GLINT_CUTOUT_LAYER);
 
 						//render call
 						OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
-						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickModelPart, matrices, glintLayer, Integer.MAX_VALUE, 0, sprite, sheeted, true, tintedColor, crumblingOverlay, i);
+						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickGlintModelPart, matrices, glintLayer, Integer.MAX_VALUE, 0, sprite, sheeted, true, tintedColor, crumblingOverlay, i);
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
 					}
 				}
@@ -158,7 +163,8 @@ public class EnchantmentGlintOutline implements ModInitializer {
 					};
 					RenderLayer colorLayer = colorLayerFactory.apply(texture);
 
-					HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, colorLayerFactory, 0.02f);
+					boolean isDoubleSided = isRenderLayerDoubleSided(renderLayer);
+					HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, colorLayerFactory, isDoubleSided, 0.02f);
 
 					queueHolder.getBatchingQueue(getColorBatchingQueue()).submitModel(thickColorModel, s, matrixStack, colorLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
 				}
@@ -173,7 +179,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 					};
 					RenderLayer glintZLayer = glintZLayerFactory.apply(texture);
 
-					HijackedModel thickGlintZModel = ModelHelper.getThickenedModel(model, glintZLayerFactory, 0.02f);
+					HijackedModel thickGlintZModel = ModelHelper.getThickenedModel(model, glintZLayerFactory, false, 0.02f);
 
 					queueHolder.getBatchingQueue(getZFixBatchingQueue()).submitModel(thickGlintZModel, s, matrixStack, glintZLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
 					queueHolder.getBatchingQueue(getZFixBatchingQueue()+1).submitModel(thickGlintZModel, s, matrixStack, Shaders.ARMOR_ENTITY_GLINT_FIX, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
@@ -274,6 +280,16 @@ public class EnchantmentGlintOutline implements ModInitializer {
 
 			return null;
 		});
+	}
+
+	public static boolean isRenderLayerDoubleSided(RenderLayer renderLayer){
+		if(renderLayer instanceof RenderLayer.MultiPhase phase){
+			RenderPipeline pipeline = ((RenderLayerMultiPhaseAccessor)(Object)phase).getPipeline();
+			if(pipeline != null){
+				return !((RenderPipelineAccessor)pipeline).enchantOutline$getCull();
+			}
+		}
+		return false;
 	}
 
 	public static RenderLayer getOrCreateRenderLayerRenderLayerWithTexture(RenderLayer fromLayer, Function<Identifier, RenderLayer> layerCreateFunction, RenderLayer fallback){
