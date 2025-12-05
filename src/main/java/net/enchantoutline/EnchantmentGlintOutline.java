@@ -40,12 +40,12 @@ public class EnchantmentGlintOutline implements ModInitializer {
 	// That way, it's clear which mod wrote info, warnings, and errors.
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	public static int getSolidBatchingQueue(){
+	public static int getColorBatchingQueue(){
 		return -9124657;
 	}
 
 	public static int getZFixBatchingQueue(){
-		return 1;
+		return 9124657;
 	}
 
 	public static final CustomRenderLayers GLINT_LAYERS = new CustomRenderLayers();
@@ -99,6 +99,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		RenderQuads.Model.ModelPart.EVENT.register((receiver, part, matrices, renderLayer, light, overlay, sprite, sheeted, hasGlint, tintedColor, crumblingOverlay, i) -> {
 			if(config.isEnabled()){
 				if(hasGlint){
+					ModelPart thickModelPart = ModelHelper.thickenedModelPart(part, 0.02f);
 					if(config.shouldRenderSolid()) {
 						int tint = config.getOutlineColorAsInt(config.getOutlineColor());
 
@@ -106,13 +107,20 @@ public class EnchantmentGlintOutline implements ModInitializer {
 						RenderLayer colorLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier), Shaders.COLOR_CUTOUT_LAYER);
 						RenderLayer zFixLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(ZFIX_LAYERS, Shaders::createZFixRenderLayer, identifier), Shaders.ZFIX_CUTOUT_LAYER);
 
-						ModelPart thickModelPart = ModelHelper.thickenedModelPart(part, 0.02f);
+						//render call
+						OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
+						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
+						receiver.getBatchingQueue(getColorBatchingQueue()).submitModelPart(thickModelPart, matrices, colorLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickModelPart, matrices, zFixLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
+					}
+					else{
+						RenderLayer glintLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(GLINT_LAYERS, Shaders::createGlintRenderLayer, identifier), Shaders.GLINT_CUTOUT_LAYER);
 
 						//render call
 						OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
-						receiver.getBatchingQueue(getSolidBatchingQueue()).submitModelPart(thickModelPart, matrices, colorLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
-						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickModelPart, matrices, zFixLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickModelPart, matrices, glintLayer, Integer.MAX_VALUE, 0, sprite, sheeted, true, tintedColor, crumblingOverlay, i);
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
 					}
 				}
@@ -136,22 +144,40 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		EquipmentRendererQueueEnchantedCallback.EVENT.register(((receiver, queueHolder, texture, model, s, matrixStack, renderLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand) -> {
 			//I can build this using the current renderLayer the model class is surprisingly simple. It just is made of a model part which I already am able to render an outline for. just build a new model every frame and we should be set
 			if(config.isEnabled()){
-				int tint = config.getOutlineColorAsInt(config.getOutlineColor());
-
-				Function<Identifier, RenderLayer> colorLayerFactory = (identifier) -> {
-					RenderLayer layer = Shaders.COLOR_CUTOUT_LAYER;
-					RenderLayer generatedColorLayer = getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier);
-					if(generatedColorLayer != null){
-						return generatedColorLayer;
-					}
-					return layer;
-				};
-				RenderLayer colorLayer = colorLayerFactory.apply(texture);
-
 				model.setAngles(s);
-				HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, colorLayerFactory, 0.02f);
+				if(config.shouldRenderSolid()){
+					int tint = config.getOutlineColorAsInt(config.getOutlineColor());
 
-				queueHolder.getBatchingQueue(getSolidBatchingQueue()).submitModel(thickColorModel, s, matrixStack, colorLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
+					Function<Identifier, RenderLayer> colorLayerFactory = (identifier) -> {
+						RenderLayer layer = Shaders.COLOR_CUTOUT_LAYER;
+						RenderLayer generatedColorLayer = getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier);
+						if(generatedColorLayer != null){
+							return generatedColorLayer;
+						}
+						return layer;
+					};
+					RenderLayer colorLayer = colorLayerFactory.apply(texture);
+
+					HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, colorLayerFactory, 0.02f);
+
+					queueHolder.getBatchingQueue(getColorBatchingQueue()).submitModel(thickColorModel, s, matrixStack, colorLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
+				}
+				else{
+					Function<Identifier, RenderLayer> glintZLayerFactory = (identifier) -> {
+						RenderLayer layer = Shaders.GLINT_CUTOUT_LAYER;
+						RenderLayer generatedGlintLayer = getOrCreateRenderLayer(GLINT_LAYERS, Shaders::createGlintRenderLayer, identifier);
+						if(generatedGlintLayer != null){
+							return generatedGlintLayer;
+						}
+						return layer;
+					};
+					RenderLayer glintZLayer = glintZLayerFactory.apply(texture);
+
+					HijackedModel thickGlintZModel = ModelHelper.getThickenedModel(model, glintZLayerFactory, 0.02f);
+
+					queueHolder.getBatchingQueue(getZFixBatchingQueue()).submitModel(thickGlintZModel, s, matrixStack, glintZLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
+					queueHolder.getBatchingQueue(getZFixBatchingQueue()+1).submitModel(thickGlintZModel, s, matrixStack, Shaders.ARMOR_ENTITY_GLINT_FIX, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
+				}
 			}
 
 			return ActionResult.PASS;
@@ -215,6 +241,11 @@ public class EnchantmentGlintOutline implements ModInitializer {
 								}
 							}
 						}
+
+						//this block is stupid, but we need to make sure our armor layer goes where we want it to. This is how
+						if(set.getKey() == Shaders.ARMOR_ENTITY_GLINT_FIX){
+							enchantGlintLayer = Shaders.ARMOR_ENTITY_GLINT_FIX;
+						}
 						if(set.getKey() == enchantGlintLayer) {
 							for(RenderLayer layer : GLINT_LAYERS.renderLayers())
 							{
@@ -223,6 +254,11 @@ public class EnchantmentGlintOutline implements ModInitializer {
 								}
 							}
 						}
+						if(set.getKey() == getTargetEnchantGlintLayer()){
+							buffers.put(Shaders.ARMOR_ENTITY_GLINT_FIX, new BufferAllocator(Shaders.ARMOR_ENTITY_GLINT_FIX.getExpectedBufferSize()));
+						}
+						//end dumb block
+
 						if(set.getKey() == enchantZFixLayer){
 							for(RenderLayer layer : ZFIX_LAYERS.renderLayers())
 							{

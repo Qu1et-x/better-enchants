@@ -9,6 +9,7 @@ import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderPhase;
 import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.TriState;
 
@@ -63,7 +64,7 @@ public class Shaders {
     );
 
     public static final RenderLayer GLINT_CUTOUT_LAYER = RenderLayer.of(
-            "custom_enchants_cutout",
+            "enchout_glint_normal",
             786432,
             true,
             false,
@@ -74,20 +75,8 @@ public class Shaders {
                     .build(true)
     );
 
-    public static final RenderLayer GLINT_SOLID_LAYER = RenderLayer.of(
-            "custom_enchants_solid",
-            786432,
-            true,
-            false,
-            SOLID_PIPELINE_DEPTH,
-            RenderLayer.MultiPhaseParameters.builder()
-                    .lightmap(RenderLayer.ENABLE_LIGHTMAP)
-                    //.texture(RenderLayer.BLOCK_ATLAS_TEXTURE)
-                    .build(true)
-    );
-
     public static final RenderLayer COLOR_CUTOUT_LAYER = RenderLayer.of(
-            "custom_enchants_cutout",
+            "enchnout_color_normal",
             786432,
             true,
             false,
@@ -98,20 +87,8 @@ public class Shaders {
                     .build(true)
     );
 
-    public static final RenderLayer COLOR_SOLID_LAYER = RenderLayer.of(
-            "custom_enchants_solid",
-            786432,
-            true,
-            false,
-            SOLID_PIPELINE_COLOR,
-            RenderLayer.MultiPhaseParameters.builder()
-                    .lightmap(RenderLayer.ENABLE_LIGHTMAP)
-                    .overlay(RenderLayer.DISABLE_OVERLAY_COLOR)
-                    .build(true)
-    );
-
     public static final RenderLayer ZFIX_CUTOUT_LAYER = RenderLayer.of(
-            "custom_enchants_cutout",
+            "enchout_zfix_normal",
             786432,
             true,
             false,
@@ -122,21 +99,33 @@ public class Shaders {
                     .build(true)
     );
 
-    public static final RenderLayer ZFIX_SOLID_LAYER = RenderLayer.of(
-            "custom_enchants_solid",
-            786432,
-            true,
-            false,
-            SOLID_PIPELINE_DEPTH,
+    public static final RenderLayer ARMOR_ENTITY_GLINT_FIX = RenderLayer.of(
+            "enchantoutline_armor_glint",
+            1536,
+            RenderPipelines.GLINT,
             RenderLayer.MultiPhaseParameters.builder()
-                    .lightmap(RenderLayer.ENABLE_LIGHTMAP)
-                    //.texture(RenderLayer.BLOCK_ATLAS_TEXTURE)
+                    .texture(new RenderPhase.Texture(ItemRenderer.ENTITY_ENCHANTMENT_GLINT, false))
+                    .texturing(RenderLayer.ARMOR_ENTITY_GLINT_TEXTURING)
                     .build(true)
     );
 
+    public static RenderLayer createGlintRenderLayer(Identifier texture) {
+        return RenderLayer.of(
+                "enchout_glint_model",
+                786432,
+                true,
+                false,
+                CUTOUT_PIPELINE_DEPTH,
+                RenderLayer.MultiPhaseParameters.builder()
+                        .texture(new RenderPhase.Texture(texture, false))
+                        .lightmap(RenderLayer.ENABLE_LIGHTMAP)
+                        .build(true));
+
+    }
+
     public static RenderLayer createColorRenderLayer(Identifier texture) {
         RenderLayer layer = RenderLayer.of(
-                "custom_color_model",
+                "enchout_color_model",
                 786432,
                 true,
                 false,
@@ -153,8 +142,8 @@ public class Shaders {
     }
 
     public static RenderLayer createZFixRenderLayer(Identifier texture) {
-        RenderLayer layer = RenderLayer.of(
-                "custom_zfix_model",
+        return RenderLayer.of(
+                "enchout_zfix_model",
                 786432,
                 true,
                 false,
@@ -163,9 +152,5 @@ public class Shaders {
                         .texture(new RenderPhase.Texture(texture, false))
                         .lightmap(RenderLayer.ENABLE_LIGHTMAP)
                         .build(true));
-        //RenderLayerAccessor accessor = (RenderLayerAccessor)layer;
-        //accessor.enchantOutline$setDrawAfterCustom(true);
-        //accessor.enchantOutline$setShouldUseLayerBuffer(false);
-        return layer;
     }
 }
