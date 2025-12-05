@@ -24,12 +24,14 @@ public class EnchantmentOutlineConfig {
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     public boolean enabled = true;
+    public int outline_size = 20;
     public boolean render_solid = false;
     public int[] render_solid_outline_color_rgb = {210,150,248};
-    public boolean render_armor = true;
-    public boolean render_armor_solid = false;
+    public boolean render_equipment = true;
+    public int equipment_outline_size = 20;
+    public boolean render_equipment_solid = false;
     public Map<String, ItemOverride> item_overrides = new HashMap<>();
-    public Map<String, ItemOverride> armor_overrides = new HashMap<>();
+    public Map<String, ItemOverride> equipment_overrides = new HashMap<>();
 
     public Map<String, ItemOverride> overrides;
 
@@ -39,6 +41,14 @@ public class EnchantmentOutlineConfig {
 
     public boolean isEnabled(){
         return enabled;
+    }
+
+    public void setOutlineSize(int outlineSize){
+        this.outline_size = outlineSize;
+    }
+
+    public int getOutlineSize(){
+        return outline_size;
     }
 
     public void setRenderSolid(boolean renderSolid){
@@ -73,19 +83,27 @@ public class EnchantmentOutlineConfig {
     }
 
     public void setRenderArmor(boolean renderArmor){
-        this.render_armor = renderArmor;
+        this.render_equipment = renderArmor;
     }
 
     public boolean shouldRenderArmor(){
-        return render_armor;
+        return render_equipment;
+    }
+
+    public void setArmorOutlineSize(int armorOutlineSize){
+        this.equipment_outline_size = armorOutlineSize;
+    }
+
+    public int getArmorOutlineSize(){
+        return equipment_outline_size;
     }
 
     public void setRenderArmorSolid(boolean renderArmorSolid){
-        this.render_armor_solid = renderArmorSolid;
+        this.render_equipment_solid = renderArmorSolid;
     }
 
     public boolean shouldRenderArmorSolid(){
-        return render_armor_solid;
+        return render_equipment_solid;
     }
 
     public void setItemOverrides(Map<String, ItemOverride> item_overrides){
@@ -97,30 +115,43 @@ public class EnchantmentOutlineConfig {
     }
 
     public void setArmorOverrides(Map<String, ItemOverride> armor_overrides){
-        this.armor_overrides = armor_overrides;
+        this.equipment_overrides = armor_overrides;
     }
 
     public Map<String, ItemOverride> getArmorOverrides(){
-        return armor_overrides;
+        return equipment_overrides;
     }
 
     @Nullable
-    public ItemOverride getItemOverride(String item){
+    public ItemOverride getItemOverride(Object item){
         return item_overrides.get(item);
     }
 
     @Nullable
-    public ItemOverride getArmorOverride(String item){
-        return armor_overrides.get(item);
+    public ItemOverride getArmorOverride(Object item){
+        return equipment_overrides.get(item);
     }
 
-    public boolean getRenderSolidOverrideOrDefault(ItemOverride override){
+    public float getScaleFactorFromOutlineSize(int outlineSize){
+        return outlineSize/1000f;
+    }
+
+    public int getOutlineSizeOverrideOrDefault(ItemOverride override, boolean armor){
+        if(override != null){
+            if(override.shouldOverrideOutlineSize()){
+                return override.getOutlineSize();
+            }
+        }
+        return armor ? getArmorOutlineSize() : getOutlineSize();
+    }
+
+    public boolean getRenderSolidOverrideOrDefault(ItemOverride override, boolean armor){
         if(override != null){
             if(override.shouldOverrideRenderSolid()){
                 return override.shouldRenderSolid();
             }
         }
-        return shouldRenderSolid();
+        return armor ? shouldRenderArmorSolid() : shouldRenderSolid();
     }
 
     public int[] getOutlineColorOverrideOrDefault(ItemOverride override){

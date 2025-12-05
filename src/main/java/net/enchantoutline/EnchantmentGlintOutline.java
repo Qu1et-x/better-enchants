@@ -1,5 +1,6 @@
 package net.enchantoutline;
 
+import it.unimi.dsi.fastutil.Function;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.enchantoutline.config.EnchantmentOutlineConfig;
 import net.enchantoutline.config.ItemOverride;
@@ -88,21 +89,21 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		RenderQuads.Normal.Callback.EVENT.register((receiver, orderedRenderCommandQueue, matrixStack, itemDisplayContext, light, overlay, outlineColors, tintLayers, quads, renderLayer, glintType) -> {
 			if(config.isEnabled()){
 				if (glintType != ItemRenderState.Glint.NONE) {
-					@Nullable ItemOverride override = getItemOverrideFromLayerRenderState(receiver);
+					@Nullable ItemOverride override = getOverrideFromLayerRenderState(config::getItemOverride, receiver);
 					if(override == null || override.shouldRender()){
-						if(config.getRenderSolidOverrideOrDefault(override)) {
+						float scale = config.getScaleFactorFromOutlineSize(config.getOutlineSizeOverrideOrDefault(override, false));
+						List<BakedQuad> thickenedQuads = QuadHelper.thickenQuad(quads, scale);
+						if(config.getRenderSolidOverrideOrDefault(override, false)) {
 							//render solid (by having no Z write, while Z test but rendering before the item is Rendered)
 
 							int[] tint = {config.getOutlineColorAsInt(config.getOutlineColorOverrideOrDefault(override))};
 
-							List<BakedQuad> thickenedQuads = QuadHelper.thickenQuad(quads, 0.02f);
 							orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tint, thickenedQuads, Shaders.COLOR_CUTOUT_LAYER, ItemRenderState.Glint.NONE);
 							orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tintLayers, thickenedQuads, Shaders.ZFIX_CUTOUT_LAYER, ItemRenderState.Glint.NONE);
 
 						}
 						else{
 							//render glint (by having Z write and Z test, but no color write after rendering the item, in other words write to the depth buffer)
-							List<BakedQuad> thickenedQuads = QuadHelper.thickenQuad(quads, 0.02f);
 							orderedRenderCommandQueue.submitItem(matrixStack, itemDisplayContext, 0, 0, outlineColors, tintLayers, thickenedQuads, Shaders.GLINT_CUTOUT_LAYER, glintType);
 						}
 					}
@@ -118,13 +119,15 @@ public class EnchantmentGlintOutline implements ModInitializer {
 					ItemRenderState.LayerRenderState storedLayerRenderState = LAYER_RENDER_STATE_RENDER_MODEL_STORAGE.get();
 					@Nullable ItemOverride override = null;
 					if(storedLayerRenderState != null){
-						override = getItemOverrideFromLayerRenderState(storedLayerRenderState);
+						override = getOverrideFromLayerRenderState(config::getItemOverride, storedLayerRenderState);
 					}
 
 					boolean isDoubleSided = RenderLayerHelper.isRenderLayerDoubleSided(renderLayer);
-					ModelPart thickModelPart = ModelHelper.thickenedModelPart(part, 0.02f);
+
+					float scale = config.getScaleFactorFromOutlineSize(config.getOutlineSizeOverrideOrDefault(override, false));
+					ModelPart thickModelPart = ModelHelper.thickenedModelPart(part, scale);
 					if(override == null || override.shouldRender()) {
-						if (config.getRenderSolidOverrideOrDefault(override)) {
+						if (config.getRenderSolidOverrideOrDefault(override, false)) {
 							int tint = config.getOutlineColorAsInt(config.getOutlineColorOverrideOrDefault(override));
 
 							//get render layer
@@ -155,31 +158,37 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			return ActionResult.PASS;
 		});
 
-		EquipmentRendererQueueEnchantedCallback.EVENT.register(((receiver, queueHolder, texture, model, s, matrixStack, renderLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand) -> {
+		EquipmentRendererQueueEnchantedCallback.EVENT.register((( queueHolder, renderedStack, queue, texture, model, s, matrixStack, renderLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand) -> {
 			//I can build this using the current renderLayer the model class is surprisingly simple. It just is made of a model part which I already am able to render an outline for. just build a new model every frame and we should be set
 			if(config.isEnabled()){
-				model.setAngles(s);
-
-				boolean isDoubleSided = RenderLayerHelper.isRenderLayerDoubleSided(renderLayer);
-				if(config.shouldRenderSolid()){
-					int tint = config.getOutlineColorAsInt(config.getOutlineColor());
-
-					RenderLayer colorLayer = RenderLayerHelper.renderLayerFromIdentifierDoubleSided(texture, COLOR_LAYERS, Shaders::createColorRenderLayerNoCull, Shaders::createColorRenderLayerCull, Shaders.COLOR_CUTOUT_LAYER, isDoubleSided);
-
-					HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, layer -> Shaders.COLOR_CUTOUT_LAYER, 0.02f);
-
-					queueHolder.getBatchingQueue(getColorBatchingQueue()).submitModel(thickColorModel, s, matrixStack, colorLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
+				@Nullable ItemOverride override = null;
+				if(renderedStack != null){
+					override = getOverrideFromNullableItem(config::getArmorOverride, renderedStack.getItem());
 				}
-				else{
-					RenderLayer glintZLayer = RenderLayerHelper.renderLayerFromIdentifierDoubleSided(texture, GLINT_LAYERS, Shaders::createGlintRenderLayerNoCull, Shaders::createGlintRenderLayerCull, Shaders.GLINT_CUTOUT_LAYER, isDoubleSided);
+				if(override == null && config.shouldRenderArmor() || override != null && override.shouldRender()){
+					model.setAngles(s);
 
-					HijackedModel thickGlintZModel = ModelHelper.getThickenedModel(model, layer -> Shaders.GLINT_CUTOUT_LAYER, 0.02f);
+					float scale = config.getScaleFactorFromOutlineSize(config.getOutlineSizeOverrideOrDefault(override, true));
+					if(config.getRenderSolidOverrideOrDefault(override, true)){
+						int tint = config.getOutlineColorAsInt(config.getOutlineColorOverrideOrDefault(override));
 
-                    queueHolder.getBatchingQueue(getZFixBatchingQueue()).submitModel(thickGlintZModel, s, matrixStack, glintZLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
-					queueHolder.getBatchingQueue(getZFixBatchingQueue()+1).submitModel(thickGlintZModel, s, matrixStack, Shaders.ARMOR_ENTITY_GLINT_FIX, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
+						//armor is literally always double-sided, the equipment renderer forces it to use double-sided.
+						RenderLayer colorLayer = RenderLayerHelper.renderLayerFromIdentifierDoubleSided(texture, COLOR_LAYERS, Shaders::createColorRenderLayerNoCull, Shaders::createColorRenderLayerCull, Shaders.COLOR_CUTOUT_LAYER, true);
+
+						HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, layer -> Shaders.COLOR_CUTOUT_LAYER, scale);
+
+						queueHolder.getBatchingQueue(getColorBatchingQueue()).submitModel(thickColorModel, s, matrixStack, colorLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
+					}
+					else{
+						RenderLayer glintZLayer = RenderLayerHelper.renderLayerFromIdentifierDoubleSided(texture, GLINT_LAYERS, Shaders::createGlintRenderLayerNoCull, Shaders::createGlintRenderLayerCull, Shaders.GLINT_CUTOUT_LAYER, true);
+
+						HijackedModel thickGlintZModel = ModelHelper.getThickenedModel(model, layer -> Shaders.GLINT_CUTOUT_LAYER, scale);
+
+						queueHolder.getBatchingQueue(getZFixBatchingQueue()).submitModel(thickGlintZModel, s, matrixStack, glintZLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
+						queueHolder.getBatchingQueue(getZFixBatchingQueue()+1).submitModel(thickGlintZModel, s, matrixStack, Shaders.ARMOR_ENTITY_GLINT_FIX, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
+					}
 				}
 			}
-
 			return ActionResult.PASS;
 		}));
 
@@ -330,15 +339,20 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		ZFIX_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID, "cutoutlayer").toString(), Shaders.ZFIX_CUTOUT_LAYER);
 	}
 
-	@Nullable ItemOverride getItemOverrideFromLayerRenderState(ItemRenderState.LayerRenderState layerRenderState){
+	@Nullable ItemOverride getOverrideFromLayerRenderState(Function<String, @Nullable ItemOverride> overrideGetter, ItemRenderState.LayerRenderState layerRenderState){
 		@Nullable ItemRenderState owningState = ((ItemRenderState_LayerRenderStateAccessor)layerRenderState).enchantOutline$getOwningRenderState();
 		if(owningState != null){
 			@Nullable Item renderedItem = ((ItemRenderStateAccessor)owningState).enchantOutline$getItemRendered();
-			if(renderedItem != null){
-				Identifier itemId = Registries.ITEM.getId(renderedItem);
-				if(itemId != null){
-					return config.getItemOverride(itemId.toString());
-				}
+			return getOverrideFromNullableItem(overrideGetter, renderedItem);
+		}
+		return null;
+	}
+
+	@Nullable ItemOverride getOverrideFromNullableItem(Function<String, @Nullable ItemOverride> overrideGetter, @Nullable Item renderedItem){
+		if(renderedItem != null){
+			Identifier itemId = Registries.ITEM.getId(renderedItem);
+			if(itemId != null){
+				return overrideGetter.apply(itemId.toString());
 			}
 		}
 		return null;

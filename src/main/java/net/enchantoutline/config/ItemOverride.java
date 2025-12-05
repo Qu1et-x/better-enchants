@@ -4,6 +4,8 @@ import net.minecraft.util.math.ColorHelper;
 
 public class ItemOverride {
     public boolean render = true;
+    public boolean override_outline_size = false;
+    public int outline_size = 20;
     public boolean override_render_solid = false;
     public boolean render_solid = false;
     public boolean override_render_solid_outline_color = false;
@@ -16,6 +18,22 @@ public class ItemOverride {
         return render;
     }
 
+    public void setOverrideOutlineSize(boolean overrideOutlineSize){
+        this.override_outline_size = overrideOutlineSize;
+    }
+
+    public boolean shouldOverrideOutlineSize() {
+        return override_outline_size;
+    }
+
+    public void setOutlineSize(int outlineSize){
+        this.outline_size = outlineSize;
+    }
+
+    public int getOutlineSize(){
+        return outline_size;
+    }
+
     public void setOverrideRenderSolid(boolean overrideRenderSolid){
         this.override_render_solid = overrideRenderSolid;
     }
@@ -26,7 +44,7 @@ public class ItemOverride {
 
     public void setRenderSolid(boolean renderSolid){
         this.render_solid = renderSolid;
-    };
+    }
 
     public boolean shouldRenderSolid(){
         return render_solid;
