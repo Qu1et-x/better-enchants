@@ -100,11 +100,11 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		RenderQuads.Model.ModelPart.EVENT.register((receiver, part, matrices, renderLayer, light, overlay, sprite, sheeted, hasGlint, tintedColor, crumblingOverlay, i) -> {
 			if(config.isEnabled()){
 				if(hasGlint){
+					boolean isDoubleSided = isRenderLayerDoubleSided(renderLayer);
+					ModelPart thickModelPart = ModelHelper.thickenedModelPart(part, isDoubleSided, 0.02f);
 					if(config.shouldRenderSolid()) {
 						int tint = config.getOutlineColorAsInt(config.getOutlineColor());
 
-						boolean isDoubleSided = isRenderLayerDoubleSided(renderLayer);
-						ModelPart thickColorModelPart = ModelHelper.thickenedModelPart(part, isDoubleSided, 0.02f);
 						//get render layer
 						RenderLayer colorLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier), Shaders.COLOR_CUTOUT_LAYER);
 						RenderLayer zFixLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(ZFIX_LAYERS, Shaders::createZFixRenderLayer, identifier), Shaders.ZFIX_CUTOUT_LAYER);
@@ -112,12 +112,11 @@ public class EnchantmentGlintOutline implements ModInitializer {
 						//render call
 						OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
-						receiver.getBatchingQueue(getColorBatchingQueue()).submitModelPart(thickColorModelPart, matrices, colorLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
-						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickColorModelPart, matrices, zFixLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						receiver.getBatchingQueue(getColorBatchingQueue()).submitModelPart(thickModelPart, matrices, colorLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickModelPart, matrices, zFixLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
 					}
 					else{
-						ModelPart thickGlintModelPart = ModelHelper.thickenedModelPart(part, false, 0.02f);
 
 						//get render layer
 						RenderLayer glintLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(GLINT_LAYERS, Shaders::createGlintRenderLayer, identifier), Shaders.GLINT_CUTOUT_LAYER);
@@ -125,7 +124,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 						//render call
 						OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
-						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickGlintModelPart, matrices, glintLayer, Integer.MAX_VALUE, 0, sprite, sheeted, true, tintedColor, crumblingOverlay, i);
+						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickModelPart, matrices, glintLayer, Integer.MAX_VALUE, 0, sprite, sheeted, true, tintedColor, crumblingOverlay, i);
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
 					}
 				}
@@ -179,7 +178,8 @@ public class EnchantmentGlintOutline implements ModInitializer {
 					};
 					RenderLayer glintZLayer = glintZLayerFactory.apply(texture);
 
-					HijackedModel thickGlintZModel = ModelHelper.getThickenedModel(model, glintZLayerFactory, false, 0.02f);
+					boolean isDoubleSided = isRenderLayerDoubleSided(renderLayer);
+					HijackedModel thickGlintZModel = ModelHelper.getThickenedModel(model, glintZLayerFactory, isDoubleSided, 0.02f);
 
 					queueHolder.getBatchingQueue(getZFixBatchingQueue()).submitModel(thickGlintZModel, s, matrixStack, glintZLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
 					queueHolder.getBatchingQueue(getZFixBatchingQueue()+1).submitModel(thickGlintZModel, s, matrixStack, Shaders.ARMOR_ENTITY_GLINT_FIX, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
