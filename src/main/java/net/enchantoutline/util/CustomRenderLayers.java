@@ -6,7 +6,7 @@ import net.minecraft.util.Identifier;
 import java.util.HashMap;
 import java.util.Map;
 public class CustomRenderLayers {
-    private final Map<Identifier, RenderLayer> customRenderLayers = new HashMap<>();
+    private final Map<String, RenderLayer> customRenderLayers = new HashMap<>();
     private int dirty = 0;
 
     public int getDirty()
@@ -19,7 +19,7 @@ public class CustomRenderLayers {
         this.dirty = dirty;
     }
 
-    public RenderLayer addCustomRenderLayer(Identifier identifier, RenderLayer layer)
+    public RenderLayer addCustomRenderLayer(String identifier, RenderLayer layer)
     {
         RenderLayer output = customRenderLayers.put(identifier, layer);
         if(output == null)
@@ -29,7 +29,7 @@ public class CustomRenderLayers {
         return output;
     }
 
-    public RenderLayer getCustomRenderLayer(Identifier identifier)
+    public RenderLayer getCustomRenderLayer(String identifier)
     {
         return customRenderLayers.get(identifier);
     }

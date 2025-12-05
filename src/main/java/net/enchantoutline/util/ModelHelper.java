@@ -19,20 +19,20 @@ import java.util.*;
 import java.util.function.Function;
 
 public class ModelHelper {
-    public static HijackedModel getThickenedModel(Model original, Function<Identifier, RenderLayer> layerFactory, boolean doubleSided, float scale){
+    public static HijackedModel getThickenedModel(Model original, Function<Identifier, RenderLayer> layerFactory, float scale){
         ModelPart root = original.getRootPart();
-        ModelPart thickenedRoot = thickenedModelPart(root, doubleSided, scale);
+        ModelPart thickenedRoot = thickenedModelPart(root, scale);
 
         return new HijackedModel(thickenedRoot, layerFactory);
     }
 
-    public static ModelPart thickenedModelPart(ModelPart original, boolean doubleSided, float scale){
+    public static ModelPart thickenedModelPart(ModelPart original, float scale){
         //the times 15 is just because it turns out that makes the output about visually equal to the bakedItemRenderer
-        return thickenedModelPart(original, doubleSided, scale * ModelPart.Vertex.SCALE_FACTOR, new MatrixStack());
+        return thickenedModelPart(original, scale * ModelPart.Vertex.SCALE_FACTOR, new MatrixStack());
     }
 
     //get thick
-    private static ModelPart thickenedModelPart(ModelPart original, boolean doubleSided, float scale, MatrixStack stack){
+    private static ModelPart thickenedModelPart(ModelPart original, float scale, MatrixStack stack){
         //push matrix stack so that we can apply the models offsets
         stack.push();
         stack.translate(original.originX, original.originY, original.originZ);
@@ -52,16 +52,6 @@ public class ModelHelper {
             List<BakedQuad> bakedQuads = ModelHelper.modelPartQuadToBakedQuad(cubeQuads, stack);
 
             List<BakedQuad> thickQuads = QuadHelper.thickenQuad(bakedQuads, scale);
-            if(doubleSided){
-                List<BakedQuad> originalList = thickQuads;
-                thickQuads = new ArrayList<>(originalList.size()*2);
-                for(BakedQuad quad : originalList){
-                    int[] vertexData = VertexHelper.flip(quad.vertexData());
-                    BakedQuad newQuad = new BakedQuad(vertexData, quad.tintIndex(), quad.face(), quad.sprite(), quad.shade(), quad.lightEmission());
-                    thickQuads.add(quad);
-                    thickQuads.add(newQuad);
-                }
-            }
             List<ModelPart.Cuboid> thickFaceCuboid = ModelHelper.bakedQuadToCuboid(thickQuads);
             thickCuboids.addAll(thickFaceCuboid);
         }
@@ -69,7 +59,7 @@ public class ModelHelper {
         Map<String, ModelPart> oldChildren = modelPartAccessor.enchantOutline$getChildren();
         Map<String, ModelPart> newChildren = new HashMap<>(oldChildren.size());
         for(var set :oldChildren.entrySet()){
-            newChildren.put(set.getKey(), thickenedModelPart(set.getValue(), doubleSided, scale, stack));
+            newChildren.put(set.getKey(), thickenedModelPart(set.getValue(), scale, stack));
             stack.pop();
         }
 

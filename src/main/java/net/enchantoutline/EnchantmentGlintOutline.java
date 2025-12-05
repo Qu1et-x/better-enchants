@@ -1,23 +1,20 @@
 package net.enchantoutline;
 
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.enchantoutline.config.EnchantmentOutlineConfig;
 import net.enchantoutline.config.ItemOverride;
 import net.enchantoutline.events.*;
-import net.enchantoutline.mixin.RenderLayerMultiPhaseAccessor;
-import net.enchantoutline.mixin.RenderPhase_TextureAccessor;
 import net.enchantoutline.mixin_accessors.*;
 import net.enchantoutline.model.HijackedModel;
 import net.enchantoutline.shader.Shaders;
 import net.enchantoutline.util.CustomRenderLayers;
 import net.enchantoutline.util.ModelHelper;
 import net.enchantoutline.util.QuadHelper;
+import net.enchantoutline.util.RenderLayerHelper;
 import net.fabricmc.api.ModInitializer;
 
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.RenderPhase;
 import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.client.render.item.ItemRenderState;
 import net.minecraft.client.render.model.BakedQuad;
@@ -34,7 +31,6 @@ import java.io.BufferedReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Function;
 
 public class EnchantmentGlintOutline implements ModInitializer {
 	public static final String MOD_ID = "enchantment-glint-outline";
@@ -125,15 +121,15 @@ public class EnchantmentGlintOutline implements ModInitializer {
 						override = getItemOverrideFromLayerRenderState(storedLayerRenderState);
 					}
 
-					boolean isDoubleSided = isRenderLayerDoubleSided(renderLayer);
-					ModelPart thickModelPart = ModelHelper.thickenedModelPart(part, isDoubleSided, 0.02f);
+					boolean isDoubleSided = RenderLayerHelper.isRenderLayerDoubleSided(renderLayer);
+					ModelPart thickModelPart = ModelHelper.thickenedModelPart(part, 0.02f);
 					if(override == null || override.shouldRender()) {
 						if (config.getRenderSolidOverrideOrDefault(override)) {
 							int tint = config.getOutlineColorAsInt(config.getOutlineColorOverrideOrDefault(override));
 
 							//get render layer
-							RenderLayer colorLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier), Shaders.COLOR_CUTOUT_LAYER);
-							RenderLayer zFixLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(ZFIX_LAYERS, Shaders::createZFixRenderLayer, identifier), Shaders.ZFIX_CUTOUT_LAYER);
+							RenderLayer colorLayer = RenderLayerHelper.renderLayerFromRenderLayerDoubleSided(renderLayer, COLOR_LAYERS, Shaders::createColorRenderLayerNoCull, Shaders::createColorRenderLayerCull, Shaders.COLOR_CUTOUT_LAYER, isDoubleSided);
+							RenderLayer zFixLayer = RenderLayerHelper.renderLayerFromRenderLayerDoubleSided(renderLayer, ZFIX_LAYERS, Shaders::createZFixRenderLayerNoCull, Shaders::createZFixRenderLayerCull, Shaders.ZFIX_CUTOUT_LAYER, isDoubleSided);
 
 							//render call
 							OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor) receiver;
@@ -145,7 +141,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 							//instead of using render double-sided for this section it would probably be better to have a creation method for double sided layers. This would be a good improvement
 
 							//get render layer
-							RenderLayer glintLayer = getOrCreateRenderLayerRenderLayerWithTexture(renderLayer, (identifier) -> getOrCreateRenderLayer(GLINT_LAYERS, Shaders::createGlintRenderLayer, identifier), Shaders.GLINT_CUTOUT_LAYER);
+							RenderLayer glintLayer = RenderLayerHelper.renderLayerFromRenderLayerDoubleSided(renderLayer, GLINT_LAYERS, Shaders::createGlintRenderLayerNoCull, Shaders::createGlintRenderLayerCull, Shaders.GLINT_CUTOUT_LAYER, isDoubleSided);
 
 							//render call
 							OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor) receiver;
@@ -163,46 +159,24 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			//I can build this using the current renderLayer the model class is surprisingly simple. It just is made of a model part which I already am able to render an outline for. just build a new model every frame and we should be set
 			if(config.isEnabled()){
 				model.setAngles(s);
+
+				boolean isDoubleSided = RenderLayerHelper.isRenderLayerDoubleSided(renderLayer);
 				if(config.shouldRenderSolid()){
 					int tint = config.getOutlineColorAsInt(config.getOutlineColor());
 
-					Function<Identifier, RenderLayer> colorLayerFactory = (identifier) -> {
-						RenderLayer layer = Shaders.COLOR_CUTOUT_LAYER;
-						RenderLayer generatedColorLayer = getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier);
-						if(generatedColorLayer != null){
-							return generatedColorLayer;
-						}
-						return layer;
-					};
-					RenderLayer colorLayer = colorLayerFactory.apply(texture);
+					RenderLayer colorLayer = RenderLayerHelper.renderLayerFromIdentifierDoubleSided(texture, COLOR_LAYERS, Shaders::createColorRenderLayerNoCull, Shaders::createColorRenderLayerCull, Shaders.COLOR_CUTOUT_LAYER, isDoubleSided);
 
-					boolean isDoubleSided = isRenderLayerDoubleSided(renderLayer);
-					HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, colorLayerFactory, isDoubleSided, 0.02f);
+					HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, layer -> Shaders.COLOR_CUTOUT_LAYER, 0.02f);
 
 					queueHolder.getBatchingQueue(getColorBatchingQueue()).submitModel(thickColorModel, s, matrixStack, colorLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
 				}
 				else{
-					Function<Identifier, RenderLayer> glintZLayerFactory = (identifier) -> {
-						RenderLayer layer = Shaders.GLINT_CUTOUT_LAYER;
-						RenderLayer generatedGlintLayer = getOrCreateRenderLayer(GLINT_LAYERS, Shaders::createGlintRenderLayer, identifier);
-						if(generatedGlintLayer != null){
-							return generatedGlintLayer;
-						}
-						return layer;
-					};
-					RenderLayer glintZLayer = glintZLayerFactory.apply(texture);
+					RenderLayer glintZLayer = RenderLayerHelper.renderLayerFromIdentifierDoubleSided(texture, GLINT_LAYERS, Shaders::createGlintRenderLayerNoCull, Shaders::createGlintRenderLayerCull, Shaders.GLINT_CUTOUT_LAYER, isDoubleSided);
 
-					boolean isDoubleSided = isRenderLayerDoubleSided(renderLayer);
-					HijackedModel thickGlintZModel = ModelHelper.getThickenedModel(model, glintZLayerFactory, isDoubleSided, 0.02f);
-					//so not to get the rendering artifacts
-					HijackedModel thickGlintModel = thickGlintZModel;
-					if(isDoubleSided){
-						thickGlintModel = ModelHelper.getThickenedModel(model, glintZLayerFactory, false, 0.02f);
-					}
+					HijackedModel thickGlintZModel = ModelHelper.getThickenedModel(model, layer -> Shaders.GLINT_CUTOUT_LAYER, 0.02f);
 
-
-					queueHolder.getBatchingQueue(getZFixBatchingQueue()).submitModel(thickGlintZModel, s, matrixStack, glintZLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
-					queueHolder.getBatchingQueue(getZFixBatchingQueue()+1).submitModel(thickGlintModel, s, matrixStack, Shaders.ARMOR_ENTITY_GLINT_FIX, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
+                    queueHolder.getBatchingQueue(getZFixBatchingQueue()).submitModel(thickGlintZModel, s, matrixStack, glintZLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
+					queueHolder.getBatchingQueue(getZFixBatchingQueue()+1).submitModel(thickGlintZModel, s, matrixStack, Shaders.ARMOR_ENTITY_GLINT_FIX, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand);
 				}
 			}
 
@@ -350,6 +324,12 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		//---------- End Item Type Storage ----------
 	}
 
+	private static void initLayers(){
+		GLINT_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID,"cutoutlayer").toString(), Shaders.GLINT_CUTOUT_LAYER);
+		COLOR_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID,"cutoutlayer").toString(), Shaders.COLOR_CUTOUT_LAYER);
+		ZFIX_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID, "cutoutlayer").toString(), Shaders.ZFIX_CUTOUT_LAYER);
+	}
+
 	@Nullable ItemOverride getItemOverrideFromLayerRenderState(ItemRenderState.LayerRenderState layerRenderState){
 		@Nullable ItemRenderState owningState = ((ItemRenderState_LayerRenderStateAccessor)layerRenderState).enchantOutline$getOwningRenderState();
 		if(owningState != null){
@@ -362,52 +342,6 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			}
 		}
 		return null;
-	}
-
-	public static boolean isRenderLayerDoubleSided(RenderLayer renderLayer){
-		if(renderLayer instanceof RenderLayer.MultiPhase phase){
-			RenderPipeline pipeline = ((RenderLayerMultiPhaseAccessor)(Object)phase).getPipeline();
-			if(pipeline != null){
-				return !((RenderPipelineAccessor)pipeline).enchantOutline$getCull();
-			}
-		}
-		return false;
-	}
-
-	public static RenderLayer getOrCreateRenderLayerRenderLayerWithTexture(RenderLayer fromLayer, Function<Identifier, RenderLayer> layerCreateFunction, RenderLayer fallback){
-		RenderLayer layer = fallback;
-		if(fromLayer instanceof RenderLayer.MultiPhase phase){
-			RenderLayer.MultiPhaseParameters params = ((RenderLayerMultiPhaseAccessor)(Object)phase).getPhases();
-			if(params != null){
-				RenderPhase.TextureBase textureBase = ((MultiPhaseParametersAccessor)(Object)params).enchantOutline$getTexture();
-				if(textureBase != null){
-					Optional<Identifier> texture = ((RenderPhase_TextureAccessor)textureBase).invokeGetId();
-					if(texture.isPresent()){
-						RenderLayer newLayer = layerCreateFunction.apply(texture.orElseThrow());
-						if(newLayer != null){
-							layer = newLayer;
-						}
-					}
-				}
-			}
-		}
-		return layer;
-	}
-
-	private static void initLayers(){
-		GLINT_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID,"cutoutlayer"), Shaders.GLINT_CUTOUT_LAYER);
-		COLOR_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID,"cutoutlayer"), Shaders.COLOR_CUTOUT_LAYER);
-		ZFIX_LAYERS.addCustomRenderLayer(Identifier.of(MOD_ID, "cutoutlayer"), Shaders.ZFIX_CUTOUT_LAYER);
-	}
-
-	@Nullable
-	public static RenderLayer getOrCreateRenderLayer(CustomRenderLayers customRenderLayers, Function<Identifier, RenderLayer> layerCreationFunction, Identifier identifier){
-		RenderLayer output = customRenderLayers.getCustomRenderLayer(identifier);
-		if(output != null)
-		{
-			return output;
-		}
-		return customRenderLayers.addCustomRenderLayer(identifier, layerCreationFunction.apply(identifier));
 	}
 
 	private static void loadConfig() {

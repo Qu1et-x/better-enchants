@@ -2,7 +2,6 @@ package net.enchantoutline.shader;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.logging.LogUtils;
 import net.enchantoutline.EnchantmentGlintOutline;
 import net.enchantoutline.mixin_accessors.RenderLayerAccessor;
 import net.minecraft.client.gl.RenderPipelines;
@@ -11,7 +10,6 @@ import net.minecraft.client.render.RenderPhase;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.TriState;
 
 public class Shaders {
     private static final String MOD_ID = EnchantmentGlintOutline.MOD_ID;
@@ -25,7 +23,7 @@ public class Shaders {
             .withVertexFormat(VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL, VertexFormat.DrawMode.QUADS)
             .buildSnippet();
 
-    public static final RenderPipeline CUTOUT_PIPELINE_DEPTH = RenderPipelines.register(
+    public static final RenderPipeline CUTOUT_PIPELINE_DEPTH_CULL = RenderPipelines.register(
             RenderPipeline.builder(OUTLINE_SNIPPET)
                     .withLocation(Identifier.of(MOD_ID, "pipeline/cutout"))
                     .withDepthWrite(true)
@@ -35,16 +33,7 @@ public class Shaders {
                     .build()
     );
 
-    public static final RenderPipeline SOLID_PIPELINE_DEPTH = RenderPipelines.register(
-            RenderPipeline.builder(OUTLINE_SNIPPET)
-                    .withDepthWrite(true)
-                    .withColorWrite(false)
-                    .withCull(true)
-                    .withLocation(Identifier.of(MOD_ID, "pipeline/solid"))
-                    .build()
-    );
-
-    public static final RenderPipeline CUTOUT_PIPELINE_COLOR = RenderPipelines.register(
+    public static final RenderPipeline CUTOUT_PIPELINE_COLOR_CULL = RenderPipelines.register(
             RenderPipeline.builder(OUTLINE_SNIPPET)
                     .withLocation(Identifier.of(MOD_ID, "pipeline/cutout"))
                     .withDepthWrite(false)
@@ -54,12 +43,23 @@ public class Shaders {
                     .build()
     );
 
-    public static final RenderPipeline SOLID_PIPELINE_COLOR = RenderPipelines.register(
+    public static final RenderPipeline CUTOUT_PIPELINE_DEPTH_NOCULL = RenderPipelines.register(
             RenderPipeline.builder(OUTLINE_SNIPPET)
+                    .withLocation(Identifier.of(MOD_ID, "pipeline/cutout"))
+                    .withDepthWrite(true)
+                    .withColorWrite(false)
+                    .withCull(false)
+                    .withShaderDefine("ALPHA_CUTOUT", 0.1F)
+                    .build()
+    );
+
+    public static final RenderPipeline CUTOUT_PIPELINE_COLOR_NOCULL = RenderPipelines.register(
+            RenderPipeline.builder(OUTLINE_SNIPPET)
+                    .withLocation(Identifier.of(MOD_ID, "pipeline/cutout"))
                     .withDepthWrite(false)
                     .withColorWrite(true)
-                    .withCull(true)
-                    .withLocation(Identifier.of(MOD_ID, "pipeline/solid"))
+                    .withCull(false)
+                    .withShaderDefine("ALPHA_CUTOUT", 0.1F)
                     .build()
     );
 
@@ -68,7 +68,7 @@ public class Shaders {
             786432,
             true,
             false,
-            CUTOUT_PIPELINE_DEPTH,
+            CUTOUT_PIPELINE_DEPTH_CULL,
             RenderLayer.MultiPhaseParameters.builder()
                     .lightmap(RenderLayer.ENABLE_LIGHTMAP)
                     .texture(RenderLayer.BLOCK_ATLAS_TEXTURE)
@@ -80,7 +80,7 @@ public class Shaders {
             786432,
             true,
             false,
-            CUTOUT_PIPELINE_COLOR,
+            CUTOUT_PIPELINE_COLOR_CULL,
             RenderLayer.MultiPhaseParameters.builder()
                     .lightmap(RenderLayer.ENABLE_LIGHTMAP)
                     .texture(RenderLayer.BLOCK_ATLAS_TEXTURE)
@@ -92,7 +92,7 @@ public class Shaders {
             786432,
             true,
             false,
-            CUTOUT_PIPELINE_DEPTH,
+            CUTOUT_PIPELINE_DEPTH_CULL,
             RenderLayer.MultiPhaseParameters.builder()
                     .lightmap(RenderLayer.ENABLE_LIGHTMAP)
                     .texture(RenderLayer.BLOCK_ATLAS_TEXTURE)
@@ -109,13 +109,13 @@ public class Shaders {
                     .build(true)
     );
 
-    public static RenderLayer createGlintRenderLayer(Identifier texture) {
+    public static RenderLayer createGlintRenderLayerCull(Identifier texture) {
         return RenderLayer.of(
                 "enchout_glint_model",
                 786432,
                 true,
                 false,
-                CUTOUT_PIPELINE_DEPTH,
+                CUTOUT_PIPELINE_DEPTH_CULL,
                 RenderLayer.MultiPhaseParameters.builder()
                         .texture(new RenderPhase.Texture(texture, false))
                         .lightmap(RenderLayer.ENABLE_LIGHTMAP)
@@ -123,13 +123,27 @@ public class Shaders {
 
     }
 
-    public static RenderLayer createColorRenderLayer(Identifier texture) {
+    public static RenderLayer createGlintRenderLayerNoCull(Identifier texture) {
+        return RenderLayer.of(
+                "enchout_glint_model",
+                786432,
+                true,
+                false,
+                CUTOUT_PIPELINE_DEPTH_NOCULL,
+                RenderLayer.MultiPhaseParameters.builder()
+                        .texture(new RenderPhase.Texture(texture, false))
+                        .lightmap(RenderLayer.ENABLE_LIGHTMAP)
+                        .build(true));
+
+    }
+
+    public static RenderLayer createColorRenderLayerCull(Identifier texture) {
         RenderLayer layer = RenderLayer.of(
                 "enchout_color_model",
                 786432,
                 true,
                 false,
-                CUTOUT_PIPELINE_COLOR,
+                CUTOUT_PIPELINE_COLOR_CULL,
                 RenderLayer.MultiPhaseParameters.builder()
                         .texture(new RenderPhase.Texture(texture, false))
                         .lightmap(RenderLayer.ENABLE_LIGHTMAP)
@@ -141,13 +155,44 @@ public class Shaders {
         return layer;
     }
 
-    public static RenderLayer createZFixRenderLayer(Identifier texture) {
+    public static RenderLayer createColorRenderLayerNoCull(Identifier texture) {
+        RenderLayer layer = RenderLayer.of(
+                "enchout_color_model",
+                786432,
+                true,
+                false,
+                CUTOUT_PIPELINE_COLOR_NOCULL,
+                RenderLayer.MultiPhaseParameters.builder()
+                        .texture(new RenderPhase.Texture(texture, false))
+                        .lightmap(RenderLayer.ENABLE_LIGHTMAP)
+                        .overlay(RenderLayer.DISABLE_OVERLAY_COLOR)
+                        .build(true));
+        RenderLayerAccessor accessor = (RenderLayerAccessor)layer;
+        accessor.enchantOutline$setDrawBeforeCustom(true);
+        accessor.enchantOutline$setShouldUseLayerBuffer(false);
+        return layer;
+    }
+
+    public static RenderLayer createZFixRenderLayerCull(Identifier texture) {
         return RenderLayer.of(
                 "enchout_zfix_model",
                 786432,
                 true,
                 false,
-                CUTOUT_PIPELINE_DEPTH,
+                CUTOUT_PIPELINE_DEPTH_CULL,
+                RenderLayer.MultiPhaseParameters.builder()
+                        .texture(new RenderPhase.Texture(texture, false))
+                        .lightmap(RenderLayer.ENABLE_LIGHTMAP)
+                        .build(true));
+    }
+
+    public static RenderLayer createZFixRenderLayerNoCull(Identifier texture) {
+        return RenderLayer.of(
+                "enchout_zfix_model",
+                786432,
+                true,
+                false,
+                CUTOUT_PIPELINE_DEPTH_NOCULL,
                 RenderLayer.MultiPhaseParameters.builder()
                         .texture(new RenderPhase.Texture(texture, false))
                         .lightmap(RenderLayer.ENABLE_LIGHTMAP)
