@@ -40,6 +40,14 @@ public class EnchantmentGlintOutline implements ModInitializer {
 	// That way, it's clear which mod wrote info, warnings, and errors.
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+	public static int getSolidBatchingQueue(){
+		return -9124657;
+	}
+
+	public static int getZFixBatchingQueue(){
+		return 1;
+	}
+
 	public static final CustomRenderLayers GLINT_LAYERS = new CustomRenderLayers();
 	public static final CustomRenderLayers COLOR_LAYERS = new CustomRenderLayers();
 	public static final CustomRenderLayers ZFIX_LAYERS = new CustomRenderLayers();
@@ -103,8 +111,8 @@ public class EnchantmentGlintOutline implements ModInitializer {
 						//render call
 						OrderedRenderCommandQueueImplAccessor commandQueueAccessor = (OrderedRenderCommandQueueImplAccessor)receiver;
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(true);
-						receiver.submitModelPart(thickModelPart, matrices, colorLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
-						receiver.submitModelPart(thickModelPart, matrices, zFixLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						receiver.getBatchingQueue(getSolidBatchingQueue()).submitModelPart(thickModelPart, matrices, colorLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
+						receiver.getBatchingQueue(getZFixBatchingQueue()).submitModelPart(thickModelPart, matrices, zFixLayer, Integer.MAX_VALUE, 0, sprite, sheeted, false, tint, crumblingOverlay, i);
 						commandQueueAccessor.enchantOutline$setSkipModelPartCallback(false);
 					}
 				}
@@ -130,20 +138,31 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			if(config.isEnabled()){
 				int tint = config.getOutlineColorAsInt(config.getOutlineColor());
 
-				Function<Identifier, RenderLayer> renderLayerFactory = (identifier) -> {
+				Function<Identifier, RenderLayer> colorLayerFactory = (identifier) -> {
 					RenderLayer layer = Shaders.COLOR_CUTOUT_LAYER;
-					RenderLayer generatedLayer = getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier);
-					if(generatedLayer != null){
-						return generatedLayer;
+					RenderLayer generatedColorLayer = getOrCreateRenderLayer(COLOR_LAYERS, Shaders::createColorRenderLayer, identifier);
+					if(generatedColorLayer != null){
+						return generatedColorLayer;
 					}
 					return layer;
 				};
-				RenderLayer outLayer = renderLayerFactory.apply(texture);
+				Function<Identifier, RenderLayer> zFixLayerFactory = (identifier) -> {
+					RenderLayer layer = Shaders.ZFIX_CUTOUT_LAYER;
+					RenderLayer generatedColorLayer = getOrCreateRenderLayer(ZFIX_LAYERS, Shaders::createZFixRenderLayer, identifier);
+					if(generatedColorLayer != null){
+						return generatedColorLayer;
+					}
+					return layer;
+				};
+				RenderLayer colorLayer = colorLayerFactory.apply(texture);
+				RenderLayer zFixLayer = colorLayerFactory.apply(texture);
 
 				model.setAngles(s);
-				HijackedModel thickModel = ModelHelper.getThickenedModel(model, renderLayerFactory, 0.02f);
+				HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, colorLayerFactory, 0.02f);
+				HijackedModel thickZFixModel = ModelHelper.getThickenedModel(model, zFixLayerFactory, 0.02f);
 
-				queueHolder.getBatchingQueue(-9124657).submitModel(thickModel, s, matrixStack, outLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
+				queueHolder.getBatchingQueue(getSolidBatchingQueue()).submitModel(thickColorModel, s, matrixStack, colorLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
+				queueHolder.getBatchingQueue(getZFixBatchingQueue()).submitModel(thickZFixModel, s, matrixStack, zFixLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
 			}
 
 			return ActionResult.PASS;

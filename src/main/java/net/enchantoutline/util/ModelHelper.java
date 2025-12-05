@@ -28,7 +28,7 @@ public class ModelHelper {
 
     public static ModelPart thickenedModelPart(ModelPart original, float scale){
         //the times 15 is just because it turns out that makes the output about visually equal to the bakedItemRenderer
-        return thickenedModelPart(original, scale * 16, new MatrixStack());
+        return thickenedModelPart(original, scale * ModelPart.Vertex.SCALE_FACTOR, new MatrixStack());
     }
 
     //get thick
