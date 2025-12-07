@@ -69,14 +69,9 @@ public class ItemOverride {
         return override_render_solid_outline_color;
     }
 
-    public void setRenderSolidOutlineColorAsInt(int color)
+    public void setRenderSolidOutlineColor(int[] color)
     {
-        color = ColorHelper.withAlpha(255, color);
-        int[] newOutlineColor = new int[3];
-        newOutlineColor[0] = ColorHelper.getRed(color);
-        newOutlineColor[1] = ColorHelper.getGreen(color);
-        newOutlineColor[2] = ColorHelper.getBlue(color);
-        render_solid_outline_color = newOutlineColor;
+        this.render_solid_outline_color = color;
     }
 
     public int[] getRenderSolidOutlineColor(){
