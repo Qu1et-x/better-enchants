@@ -5,6 +5,7 @@ import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.StateManager;
 import dev.isxander.yacl3.api.controller.ColorControllerBuilder;
 import dev.isxander.yacl3.api.controller.FloatFieldControllerBuilder;
+import dev.isxander.yacl3.api.controller.FloatSliderControllerBuilder;
 import dev.isxander.yacl3.api.controller.ItemControllerBuilder;
 import dev.isxander.yacl3.api.utils.Dimension;
 import dev.isxander.yacl3.gui.AbstractWidget;
@@ -66,6 +67,7 @@ public class ItemOverrideContainerController implements Controller<ItemOverrideC
                 .controller(TickBoxControllerBuilderImpl::new)
                 .build();
         //TODO: when YACL gets a fix update this to be a slider
+        //it had to be a slider anyway despite being tiny because you can't edit float fields for some reason YACL why
         sizeOption = Option.<Float>createBuilder()
                 .name(Text.empty())
                 .stateManager(StateManager.createInstant(defaultItemOverrideContainer.getItemOverride().getOutlineSize(), () -> {return option.pendingValue().getItemOverride().getOutlineSize();},
@@ -74,9 +76,9 @@ public class ItemOverrideContainerController implements Controller<ItemOverrideC
                             pending.getItemOverride().setOutlineSize(size);
                             option.requestSet(pending);
                         }))
-                .controller((opt) -> FloatFieldControllerBuilder.create(opt)
-                        .min(0f)
-                        .max(EnchantmentOutlineConfig.MAX_OUTLINE_SIZE)
+                .controller((opt) -> FloatSliderControllerBuilder.create(opt)
+                        .range(0f, EnchantmentOutlineConfig.MAX_OUTLINE_SIZE)
+                        .step(1f)
                         .formatValue(new FloatValueFormatter(0)))
                 .build();
         overrideRenderSolidOption = Option.<Boolean>createBuilder()

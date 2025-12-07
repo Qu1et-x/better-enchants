@@ -15,6 +15,7 @@ public class ItemOverrideContainerElement extends ControllerWidget<ItemOverrideC
     private final ItemOverrideContainerController itemOverrideContainerController;
 
     private Element focused;
+    private boolean dragging = false;
 
     private final AbstractWidget itemWidget;
     private final AbstractWidget renderWidget;
@@ -59,6 +60,11 @@ public class ItemOverrideContainerElement extends ControllerWidget<ItemOverrideC
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
         return ParentElement.super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
+    }
+
+    @Override
+    public boolean mouseDragged(net.minecraft.client.gui.Click mouseButtonEvent, double dx, double dy) {
+        return ParentElement.super.mouseDragged(mouseButtonEvent, dx, dy);
     }
 
     @Override
@@ -107,12 +113,12 @@ public class ItemOverrideContainerElement extends ControllerWidget<ItemOverrideC
 
     @Override
     public boolean isDragging() {
-        return false;
+        return dragging;
     }
 
     @Override
     public void setDragging(boolean dragging) {
-
+        this.dragging = dragging;
     }
 
     @Override
