@@ -28,7 +28,7 @@ public class ItemOverrideContainer {
     public String getItemString(){return item;}
 
     public void setItem(Item item){
-        Registries.ITEM.getId(item);
+        this.item = Registries.ITEM.getId(item).toString();
     }
 
     public Item getItem(){
