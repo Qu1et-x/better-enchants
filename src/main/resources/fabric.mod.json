@@ -1,9 +1,9 @@
 {
 	"schemaVersion": 1,
-	"id": "better-enchants",
+	"id": "enchant-outline",
 	"version": "${version}",
-	"name": "Better Enchantment Glint",
-	"description": "Adds a fancy outline to enchanted items. Works with resource packs and shaders. Sodium compatible",
+	"name": "Enchantment Glint Outline",
+	"description": "Adds a fancy outline to enchanted items. Works with resource packs and vanilla shaders. Sodium compatible",
 	"authors": [
 		"Da0neDatGotAway"
 	],
@@ -17,6 +17,9 @@
 	"entrypoints": {
 		"main": [
 			"net.enchantoutline.EnchantmentGlintOutline"
+		],
+		"modmenu": [
+			"net.enchantoutline.config.ModMenuIntegration"
 		]
 	},
 	"mixins": [
@@ -30,6 +33,6 @@
 	},
 	"suggests": {
 		"modmenu": "*",
-		"cloth-config": "*"
+		"yacl": "*"
 	}
 }

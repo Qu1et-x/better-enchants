@@ -7,6 +7,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.math.ColorHelper;
 import org.jetbrains.annotations.Nullable;
 
+import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.Reader;
 import java.nio.file.Files;
@@ -23,12 +24,14 @@ public class EnchantmentOutlineConfig {
     public static final Path CONFIG_FILE = FabricLoader.getInstance().getConfigDir().resolve("enchantment-glint-outline.json");
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
+    public static final float MAX_OUTLINE_SIZE = 30;
+
     public boolean enabled = true;
-    public int outline_size = 20;
+    public float outline_size = 20;
     public boolean render_solid = false;
     public int[] render_solid_outline_color_rgb = {210,150,248};
     public boolean render_equipment = true;
-    public int equipment_outline_size = 20;
+    public float equipment_outline_size = 20;
     public boolean render_equipment_solid = false;
     public Map<String, ItemOverride> item_overrides = new HashMap<>();
     public Map<String, ItemOverride> equipment_overrides = new HashMap<>();
@@ -43,11 +46,11 @@ public class EnchantmentOutlineConfig {
         return enabled;
     }
 
-    public void setOutlineSize(int outlineSize){
+    public void setOutlineSize(float outlineSize){
         this.outline_size = outlineSize;
     }
 
-    public int getOutlineSize(){
+    public float getOutlineSize(){
         return outline_size;
     }
 
@@ -62,6 +65,10 @@ public class EnchantmentOutlineConfig {
     public int[] getOutlineColor()
     {
         return render_solid_outline_color_rgb;
+    }
+
+    public void setBaseSolidOutlineColor(int[] color){
+        render_solid_outline_color_rgb = color;
     }
 
     public void setBaseSolidOutlineColorAsInt(int color)
@@ -90,11 +97,11 @@ public class EnchantmentOutlineConfig {
         return render_equipment;
     }
 
-    public void setArmorOutlineSize(int armorOutlineSize){
+    public void setArmorOutlineSize(float armorOutlineSize){
         this.equipment_outline_size = armorOutlineSize;
     }
 
-    public int getArmorOutlineSize(){
+    public float getArmorOutlineSize(){
         return equipment_outline_size;
     }
 
@@ -132,11 +139,19 @@ public class EnchantmentOutlineConfig {
         return equipment_overrides.get(item);
     }
 
-    public float getScaleFactorFromOutlineSize(int outlineSize){
+    public static int[] getIntFromColor(Color color){
+        return new int[]{color.getRed(), color.getGreen(), color.getBlue()};
+    }
+
+    public static Color getColorFromInt(int[] intColor){
+        return new Color(intColor[0], intColor[1], intColor[2], 255);
+    }
+
+    public float getScaleFactorFromOutlineSize(float outlineSize){
         return outlineSize/1000f;
     }
 
-    public int getOutlineSizeOverrideOrDefault(ItemOverride override, boolean armor){
+    public float getOutlineSizeOverrideOrDefault(ItemOverride override, boolean armor){
         if(override != null){
             if(override.shouldOverrideOutlineSize()){
                 return override.getOutlineSize();

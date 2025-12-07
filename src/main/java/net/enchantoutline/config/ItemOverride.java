@@ -5,7 +5,7 @@ import net.minecraft.util.math.ColorHelper;
 public class ItemOverride {
     public boolean render = true;
     public boolean override_outline_size = false;
-    public int outline_size = 20;
+    public float outline_size = 20;
     public boolean override_render_solid = false;
     public boolean render_solid = false;
     public boolean override_render_solid_outline_color = false;
@@ -26,11 +26,11 @@ public class ItemOverride {
         return override_outline_size;
     }
 
-    public void setOutlineSize(int outlineSize){
+    public void setOutlineSize(float outlineSize){
         this.outline_size = outlineSize;
     }
 
-    public int getOutlineSize(){
+    public float getOutlineSize(){
         return outline_size;
     }
 
