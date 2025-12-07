@@ -12,7 +12,9 @@ import java.io.BufferedWriter;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -119,6 +121,22 @@ public class EnchantmentOutlineConfig {
 
     public Map<String, ItemOverride> getItemOverrides(){
         return item_overrides;
+    }
+
+    public void setItemOverridesFromContainerList(List<ItemOverrideContainer> overrideList){
+        item_overrides = new HashMap<>(overrideList.size());
+        for(ItemOverrideContainer itemOverrideContainer : overrideList){
+            item_overrides.put(itemOverrideContainer.getItemString(), itemOverrideContainer.getItemOverride());
+        }
+        setItemOverrides(item_overrides);
+    }
+
+    public List<ItemOverrideContainer> getItemOverridesAsContainerList(){
+        List<ItemOverrideContainer> overrideList = new ArrayList<>(getItemOverrides().size());
+        for(var set : getItemOverrides().entrySet()){
+            overrideList.add(new ItemOverrideContainer(set.getKey(), set.getValue()));
+        }
+        return overrideList;
     }
 
     public void setArmorOverrides(Map<String, ItemOverride> armor_overrides){

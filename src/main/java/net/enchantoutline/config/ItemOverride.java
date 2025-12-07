@@ -11,6 +11,17 @@ public class ItemOverride {
     public boolean override_render_solid_outline_color = false;
     public int[] render_solid_outline_color = {210,150,248};
 
+    public ItemOverride(ItemOverride from){
+        render = from.render;
+        override_outline_size = from.override_outline_size;
+        outline_size = from.outline_size;
+        override_render_solid = from.override_render_solid;
+        render_solid = from.render_solid;
+        override_render_solid_outline_color = from.override_render_solid_outline_color;
+        render_solid_outline_color = from.render_solid_outline_color;
+    }
+    public ItemOverride(){}
+
     public void setRender(boolean render){
         this.render = render;
     }

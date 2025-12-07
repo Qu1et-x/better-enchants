@@ -3,10 +3,14 @@ package net.enchantoutline.config.yacl;
 import dev.isxander.yacl3.api.*;
 import dev.isxander.yacl3.api.controller.ColorControllerBuilder;
 import dev.isxander.yacl3.api.controller.FloatSliderControllerBuilder;
+import dev.isxander.yacl3.api.controller.ItemControllerBuilder;
 import dev.isxander.yacl3.impl.controller.BooleanControllerBuilderImpl;
 import net.enchantoutline.EnchantmentGlintOutline;
 import net.enchantoutline.config.EnchantmentOutlineConfig;
+import net.enchantoutline.config.ItemOverrideContainer;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.item.Item;
+import net.minecraft.item.Items;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
@@ -52,6 +56,13 @@ public class YACLScreenFactory {
                                         .binding(defaultConfig.shouldRenderSolid(), EnchantmentGlintOutline.getConfig()::shouldRenderSolid, EnchantmentGlintOutline.getConfig()::setRenderSolid)
                                         .controller(BooleanControllerBuilderImpl::new)
                                         .build())
+                                .build())
+                        .group(ListOption.<ItemOverrideContainer>createBuilder()
+                                .name(Text.translatable("list.enchantoutline.override.item"))
+                                .description(OptionDescription.of(Text.translatable("tooltip.list.enchantoutline.override.item")))
+                                .binding(defaultConfig.getItemOverridesAsContainerList(), EnchantmentGlintOutline.getConfig()::getItemOverridesAsContainerList, EnchantmentGlintOutline.getConfig()::setItemOverridesFromContainerList)
+                                .controller(ItemOverrideContainerControllerBuilderImpl::new)
+                                .initial(ItemOverrideContainer::new)
                                 .build())
                         .group(OptionGroup.createBuilder()
                                 .name(Text.translatable("group.enchantoutline.equipment"))
