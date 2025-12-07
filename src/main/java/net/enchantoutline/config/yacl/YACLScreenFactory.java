@@ -89,6 +89,13 @@ public class YACLScreenFactory {
                                         .controller(BooleanControllerBuilderImpl::new)
                                         .build())
                                 .build())
+                        .group(ListOption.<ItemOverrideContainer>createBuilder()
+                                .name(Text.translatable("list.enchantoutline.override.equipment"))
+                                .description(OptionDescription.of(Text.translatable("tooltip.list.enchantoutline.override.equipment")))
+                                .binding(defaultConfig.getArmorOverridesAsContainerList(), EnchantmentGlintOutline.getConfig()::getArmorOverridesAsContainerList, EnchantmentGlintOutline.getConfig()::setArmorOverridesFromContainerList)
+                                .controller(ItemOverrideContainerControllerBuilderImpl::new)
+                                .initial(ItemOverrideContainer::new)
+                                .build())
                         .build())
                 .save(EnchantmentGlintOutline.getConfig()::saveAsync)
                 .build();

@@ -100,7 +100,7 @@ public class ItemOverrideContainerElement extends ControllerWidget<ItemOverrideC
 
     @Override
     public List<? extends Element> children() {
-        return List.of(itemWidget, renderWidget, overrideSizeWidget, sizeWidget, overrideRenderSolidWidget, renderSolidWidget, overrideColorWidget, colorWidget);
+        return List.of(itemWidget, renderWidget, overrideSizeWidget, overrideRenderSolidWidget, renderSolidWidget, overrideColorWidget, sizeWidget, colorWidget);
     }
 
     @Override

@@ -147,6 +147,22 @@ public class EnchantmentOutlineConfig {
         return equipment_overrides;
     }
 
+    public void setArmorOverridesFromContainerList(List<ItemOverrideContainer> overrideList){
+        item_overrides = new HashMap<>(overrideList.size());
+        for(ItemOverrideContainer itemOverrideContainer : overrideList){
+            item_overrides.put(itemOverrideContainer.getItemString(), itemOverrideContainer.getItemOverride());
+        }
+        setArmorOverrides(item_overrides);
+    }
+
+    public List<ItemOverrideContainer> getArmorOverridesAsContainerList(){
+        List<ItemOverrideContainer> overrideList = new ArrayList<>(getArmorOverrides().size());
+        for(var set : getArmorOverrides().entrySet()){
+            overrideList.add(new ItemOverrideContainer(set.getKey(), set.getValue()));
+        }
+        return overrideList;
+    }
+
     @Nullable
     public ItemOverride getItemOverride(Object item){
         return item_overrides.get(item);
