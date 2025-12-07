@@ -1,10 +1,11 @@
-package net.enchantoutline.config;
+package net.enchantoutline.config.yacl;
 
 import dev.isxander.yacl3.api.*;
 import dev.isxander.yacl3.api.controller.ColorControllerBuilder;
 import dev.isxander.yacl3.api.controller.FloatSliderControllerBuilder;
 import dev.isxander.yacl3.impl.controller.BooleanControllerBuilderImpl;
 import net.enchantoutline.EnchantmentGlintOutline;
+import net.enchantoutline.config.EnchantmentOutlineConfig;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;

@@ -17,7 +17,8 @@
 		"EquipmentRendererMixin",
 		"RenderPipelineMixin",
 		"ItemModelManagerMixin",
-		"ItemRenderStateMixin"
+		"ItemRenderStateMixin",
+		"TridentEntityRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

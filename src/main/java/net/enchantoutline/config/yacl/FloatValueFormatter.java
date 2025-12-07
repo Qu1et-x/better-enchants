@@ -1,4 +1,4 @@
-package net.enchantoutline.config;
+package net.enchantoutline.config.yacl;
 
 import dev.isxander.yacl3.api.controller.ValueFormatter;
 import net.minecraft.text.Text;
