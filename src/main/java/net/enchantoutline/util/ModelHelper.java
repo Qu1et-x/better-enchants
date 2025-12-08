@@ -1,9 +1,12 @@
 package net.enchantoutline.util;
 
 import com.mojang.logging.LogUtils;
+import net.enchantoutline.EnchantmentGlintOutline;
 import net.enchantoutline.mixin_accessors.ModelPartAccessor;
 import net.enchantoutline.mixin_accessors.ModelPart_CuboidAccessor;
 import net.enchantoutline.model.HijackedModel;
+import net.enchantoutline.modmixinutil.SodiumHelper;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.RenderLayer;
@@ -102,17 +105,37 @@ public class ModelHelper {
         for(BakedQuad baked : original){
             VertexHelper.Vertex[] verts = VertexHelper.getVertexData(baked.vertexData());
             if(verts.length == 4){
-                ModelPart.Cuboid newCuboid = new ModelPart.Cuboid(0,0, verts[0].pos().x(), verts[0].pos().y(), verts[0].pos().z(), verts[2].pos().x() - verts[0].pos().x(), verts[2].pos().y() - verts[0].pos().y(), verts[2].pos().z() - verts[0].pos().z(), 0 ,0 ,0, false, 0, 0, Set.of());
                 ModelPart.Vertex[] newVerts = new ModelPart.Vertex[verts.length];
                 for(int i = 0; i < verts.length; i++){
                     VertexHelper.Vertex vert = verts[i];
-                     newVerts[i] = new ModelPart.Vertex(vert.pos().x(), vert.pos().y(), vert.pos().z(), vert.u(), vert.v());
+                    newVerts[i] = new ModelPart.Vertex(vert.pos().x(), vert.pos().y(), vert.pos().z(), vert.u(), vert.v());
                 }
                 ModelPart.Quad[] quadOut = {new ModelPart.Quad(newVerts, baked.face().getFloatVector())};
+
+                //EnchantmentGlintOutline.LOGGER.info("yooooooo: {}", baked.face());
+                //boolean mirror = baked.face().equals(Direction.EAST);
+                Direction dir = baked.face();
+                if(FabricLoader.getInstance().isModLoaded("sodium")){
+                    if(dir.equals(Direction.EAST)){
+                        dir = Direction.WEST;
+                    }
+                    if(dir.equals(Direction.UP)){
+                        dir = Direction.DOWN;
+                    }
+                    if(dir.equals(Direction.NORTH)){
+                        dir = Direction.SOUTH;
+                    }
+                }
+
+                SodiumHelper.getSetQuads().set(quadOut);
+
+                ModelPart.Cuboid newCuboid = new ModelPart.Cuboid(0,0, verts[0].pos().x(), verts[0].pos().y(), verts[0].pos().z(), verts[2].pos().x() - verts[0].pos().x(), verts[2].pos().y() - verts[0].pos().y(), verts[2].pos().z() - verts[0].pos().z(), 0 ,0 ,0, false, 1, 1, Set.of(dir));
                 ((ModelPart_CuboidAccessor)newCuboid).enchantOutline$SetSides(quadOut);
 
+                SodiumHelper.getSetQuads().remove();
+
                 newCuboids.add(newCuboid);
-            }
+                }
         }
         return newCuboids;
     }

@@ -2,6 +2,7 @@
 	"required": true,
 	"package": "net.enchantoutline.mixin",
 	"compatibilityLevel": "JAVA_21",
+	"plugin": "net.enchantoutline.EnchantOutlineMixinPlugin",
 	"mixins": [
 		"ItemRenderState_LayerRenderStateMixin",
 		"WorldRendererMixin",
@@ -18,7 +19,9 @@
 		"RenderPipelineMixin",
 		"ItemModelManagerMixin",
 		"ItemRenderStateMixin",
-		"TridentEntityRendererMixin"
+		"TridentEntityRendererMixin",
+
+		"sodium.ModelCuboidMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

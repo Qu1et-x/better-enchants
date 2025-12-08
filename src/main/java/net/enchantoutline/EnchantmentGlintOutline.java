@@ -2,11 +2,15 @@ package net.enchantoutline;
 
 import it.unimi.dsi.fastutil.Function;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
+import net.caffeinemc.mods.sodium.client.util.Int2;
 import net.enchantoutline.config.EnchantmentOutlineConfig;
 import net.enchantoutline.config.ItemOverride;
 import net.enchantoutline.events.*;
+import net.enchantoutline.events.sodium.ModelCuboidInitBeforeReturnCallback;
 import net.enchantoutline.mixin_accessors.*;
+import net.enchantoutline.mixin_accessors.sodium.ModelCuboidAccessor;
 import net.enchantoutline.model.HijackedModel;
+import net.enchantoutline.modmixinutil.SodiumHelper;
 import net.enchantoutline.shader.Shaders;
 import net.enchantoutline.util.CustomRenderLayers;
 import net.enchantoutline.util.ModelHelper;
@@ -14,6 +18,7 @@ import net.enchantoutline.util.QuadHelper;
 import net.enchantoutline.util.RenderLayerHelper;
 import net.fabricmc.api.ModInitializer;
 
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.TexturedRenderLayers;
@@ -26,6 +31,8 @@ import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.Direction;
+import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,7 +84,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		return RenderLayer.getWaterMask();
 	}
 
-	@Override
+    @Override
 	public void onInitialize() {
 		// This code runs as soon as Minecraft is in a mod-load-ready state.
 		// However, some things (like resources) may still be uninitialized.
@@ -125,6 +132,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 					}
 
 					boolean isDoubleSided = RenderLayerHelper.isRenderLayerDoubleSided(renderLayer);
+					//boolean isDoubleSided = true;
 
 					float scale = config.getScaleFactorFromOutlineSize(config.getOutlineSizeOverrideOrDefault(override, false));
 					ModelPart thickModelPart = ModelHelper.thickenedModelPart(part, scale);
@@ -362,6 +370,36 @@ public class EnchantmentGlintOutline implements ModInitializer {
 			return ActionResult.PASS;
 		}));
 		//---------- End Item Type Storage ----------
+
+		//---------- Mod Patches ----------
+		if(FabricLoader.getInstance().isModLoaded("sodium")){
+			ModelCuboidInitBeforeReturnCallback.EVENT.register(((receiver, u, v, x1, y1, z1, sizeX, sizeY, sizeZ, extraX, extraY, extraZ, mirror, textureWidth, textureHeight, renderDirections) -> {
+				{
+					ModelPart.Quad[] quads = SodiumHelper.getSetQuads().get();
+					if(quads != null && quads.length > 0){
+						long[] textures = new long[24];
+						ModelPart.Quad quad = quads[0];
+						for(int i = 0; i < quad.vertices().length; i++){
+							ModelPart.Vertex vert = quad.vertices()[i];
+							for(int j = 0; j < 6; j++){
+								textures[j * 4 + i] = Int2.pack(Float.floatToRawIntBits(vert.u()), Float.floatToRawIntBits(vert.v()));
+							}
+						}
+						if(renderDirections.contains(Direction.EAST)){
+							for(int faceIndex = 0; faceIndex < 6; ++faceIndex) {
+								int vertexOffset = faceIndex * 4;
+								ArrayUtils.swap(textures, vertexOffset + 0, vertexOffset + 2);
+								ArrayUtils.swap(textures, vertexOffset + 1, vertexOffset + 3);
+							}
+						}
+						ModelCuboidAccessor accessor = (ModelCuboidAccessor)receiver;
+						accessor.enchantOutline$setUvs(textures);
+					}
+					return ActionResult.PASS;
+				}
+			}));
+		}
+		//--------- End Mod Patches ----------
 	}
 
 	private static void initLayers(){
