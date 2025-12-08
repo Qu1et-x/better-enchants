@@ -170,6 +170,21 @@ public class VertexHelper {
         return vertPoses;
     }
 
+    public static Vector3f growVert(Vector3f pos, Vector3f cardinalDir, Vector3f scaledNormal){
+        Vector3f normalizedNormal = new Vector3f(scaledNormal);
+        normalizedNormal.normalize();
+        normalizedNormal.mul(0.0001f);
+        scaledNormal.add(normalizedNormal);
+
+        Vector3f vert = new Vector3f(pos);
+        vert.add(scaledNormal);
+        vert.add(cardinalDir);
+
+        return vert;
+    }
+
+
+
     public static Vector3f transformVector(MatrixStack matrices, Vector3f vec) {
         Matrix4f mat = matrices.peek().getPositionMatrix();
 
