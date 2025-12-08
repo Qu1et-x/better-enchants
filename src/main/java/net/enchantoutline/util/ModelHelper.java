@@ -1,6 +1,5 @@
 package net.enchantoutline.util;
 
-import net.enchantoutline.EnchantmentGlintOutline;
 import net.enchantoutline.mixin_accessors.ModelPartAccessor;
 import net.enchantoutline.mixin_accessors.ModelPart_CuboidAccessor;
 import net.enchantoutline.model.HijackedModel;
@@ -8,11 +7,8 @@ import net.minecraft.client.model.Model;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.model.ModelTransform;
 import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Direction;
-import org.apache.commons.lang3.ArrayUtils;
-import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.*;
@@ -30,20 +26,11 @@ public class ModelHelper {
 
     public static ModelPart thickenedModelPart(ModelPart original, float scale){
         //the times 15 is just because it turns out that makes the output about visually equal to the bakedItemRenderer
-        return thickenedModelPart(original, scale * ModelPart.Vertex.SCALE_FACTOR, new MatrixStack());
+        return thickenedModelPartInternal(original, scale * ModelPart.Vertex.SCALE_FACTOR);
     }
 
     //get thick
-    private static ModelPart thickenedModelPart(ModelPart original, float scale, MatrixStack stack){
-        //push matrix stack so that we can apply the models offsets
-        stack.push();
-       /* stack.translate(original.originX, original.originY, original.originZ);
-        if (original.pitch != 0.0F || original.yaw != 0.0F || original.roll != 0.0F) {
-            stack.multiply(new Quaternionf().rotationYXZ(original.yaw, original.pitch, original.roll));
-        }*/
-        if (original.xScale != 1.0F || original.yScale != 1.0F || original.zScale != 1.0F) {
-            stack.scale(original.xScale, original.yScale, original.zScale);
-        }
+    private static ModelPart thickenedModelPartInternal(ModelPart original, float scale){
 
         ModelPartAccessor modelPartAccessor = (ModelPartAccessor)(Object)original;
         List<ModelPart.Cuboid> cuboids = modelPartAccessor.enchantOutline$getCuboids();
@@ -52,18 +39,27 @@ public class ModelHelper {
         for(var cuboid: cuboids){
             ModelPart_CuboidAccessor accessor = ((ModelPart_CuboidAccessor)cuboid);
             for(Direction dir : accessor.enchantOutline$getDirections()){
-                thickCuboids.addAll(thickenCuboidFace(cuboid, dir, scale, stack));
+                thickCuboids.addAll(thickenCuboidFace(cuboid, dir, scale/*, stack*/));
             }
         }
 
         Map<String, ModelPart> oldChildren = modelPartAccessor.enchantOutline$getChildren();
-        Map<String, ModelPart> newChildren = new HashMap<>(oldChildren.size());
+        Map<String, ModelPart> newChildren = new HashMap<>(oldChildren.size()+1);
+
+        //Vector3f posOffset = new Vector3f(0,0,0);
+        //posOffset = VertexHelper.transformVector(stack, posOffset);
+
+        ModelPart undoTransformModelPart = new ModelPart(thickCuboids, Map.of());
+        //undoTransformModelPart.setOrigin(posOffset.x(),posOffset.y(),posOffset.z());
+        ModelTransform transform = new ModelTransform(original.originX, original.originY, original.originZ, original.pitch, original.yaw, original.roll, original.xScale, original.yScale, original.zScale);
+        undoTransformModelPart.setTransform(transform);
+        newChildren.put("EnchantOutline", undoTransformModelPart);
+
         for(var set :oldChildren.entrySet()){
-            newChildren.put(set.getKey(), thickenedModelPart(set.getValue(), scale, stack));
-            stack.pop();
+            newChildren.put(set.getKey(), thickenedModelPartInternal(set.getValue(), scale));
         }
 
-        ModelPart thickModelPart = new ModelPart(thickCuboids, newChildren);
+        ModelPart thickModelPart = new ModelPart(List.of(), newChildren);
         thickModelPart.setDefaultTransform(original.getDefaultTransform());
         ModelTransform trans = thickModelPart.getTransform();
         thickModelPart.setTransform(trans);
@@ -71,7 +67,7 @@ public class ModelHelper {
         return thickModelPart;
     }
 
-    private static List<ModelPart.Cuboid> thickenCuboidFace(ModelPart.Cuboid original, Direction dir, float scale, MatrixStack stack){
+    private static List<ModelPart.Cuboid> thickenCuboidFace(ModelPart.Cuboid original, Direction dir, float scale/*, MatrixStack stack*/){
         List<ModelPart.Cuboid> thickenedCuboids = new ArrayList<>(4);
 
         Vector3f normal = new Vector3f(dir.getUnitVector());
@@ -89,6 +85,7 @@ public class ModelHelper {
         float z = original.minZ;
 
         Vector3f startPos = new Vector3f(x, y, z);
+        //startPos = VertexHelper.transformVector(stack, startPos);
 
         float sizeX = original.maxX - x;
         float sizeY = original.maxY - y;
@@ -104,9 +101,11 @@ public class ModelHelper {
         float f = x + sizeX;
         float g = y + sizeY;
         float h = z + sizeZ;
+
         x -= extraX;
         y -= extraY;
         z -= extraZ;
+
         f += extraX;
         g += extraY;
         h += extraZ;
@@ -124,15 +123,6 @@ public class ModelHelper {
         Vector3f vertex6 = new Vector3f(f, y, h);
         Vector3f vertex7 = new Vector3f(f, g, h);
         Vector3f vertex8 = new Vector3f(x, g, h);
-
-        VertexHelper.transformVector(stack, vertex);
-        VertexHelper.transformVector(stack, vertex2);
-        VertexHelper.transformVector(stack, vertex3);
-        VertexHelper.transformVector(stack, vertex4);
-        VertexHelper.transformVector(stack, vertex5);
-        VertexHelper.transformVector(stack, vertex6);
-        VertexHelper.transformVector(stack, vertex7);
-        VertexHelper.transformVector(stack, vertex8);
 
         if(dir.equals(Direction.DOWN)){
             verts = new Vector3f[]{vertex6, vertex5, vertex, vertex2};
