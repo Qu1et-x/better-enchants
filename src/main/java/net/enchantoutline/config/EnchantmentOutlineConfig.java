@@ -2,6 +2,7 @@ package net.enchantoutline.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.mojang.logging.LogUtils;
 import net.enchantoutline.EnchantmentGlintOutline;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.math.ColorHelper;
@@ -124,11 +125,11 @@ public class EnchantmentOutlineConfig {
     }
 
     public void setItemOverridesFromContainerList(List<ItemOverrideContainer> overrideList){
-        item_overrides = new HashMap<>(overrideList.size());
+        Map<String, ItemOverride> newOverrides = new HashMap<>(overrideList.size());
         for(ItemOverrideContainer itemOverrideContainer : overrideList){
-            item_overrides.put(itemOverrideContainer.getItemString(), itemOverrideContainer.getItemOverride());
+            newOverrides.put(itemOverrideContainer.getItemString(), itemOverrideContainer.getItemOverride());
         }
-        setItemOverrides(item_overrides);
+        setItemOverrides(newOverrides);
     }
 
     public List<ItemOverrideContainer> getItemOverridesAsContainerList(){
@@ -148,11 +149,11 @@ public class EnchantmentOutlineConfig {
     }
 
     public void setArmorOverridesFromContainerList(List<ItemOverrideContainer> overrideList){
-        item_overrides = new HashMap<>(overrideList.size());
+        Map<String, ItemOverride> newOverrides = new HashMap<>(overrideList.size());
         for(ItemOverrideContainer itemOverrideContainer : overrideList){
-            item_overrides.put(itemOverrideContainer.getItemString(), itemOverrideContainer.getItemOverride());
+            newOverrides.put(itemOverrideContainer.getItemString(), itemOverrideContainer.getItemOverride());
         }
-        setArmorOverrides(item_overrides);
+        setArmorOverrides(newOverrides);
     }
 
     public List<ItemOverrideContainer> getArmorOverridesAsContainerList(){
