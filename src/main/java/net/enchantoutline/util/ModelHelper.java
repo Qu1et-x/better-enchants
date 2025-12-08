@@ -1,20 +1,17 @@
 package net.enchantoutline.util;
 
-import com.mojang.logging.LogUtils;
 import net.enchantoutline.EnchantmentGlintOutline;
 import net.enchantoutline.mixin_accessors.ModelPartAccessor;
 import net.enchantoutline.mixin_accessors.ModelPart_CuboidAccessor;
 import net.enchantoutline.model.HijackedModel;
-import net.enchantoutline.modmixinutil.SodiumHelper;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelTransform;
 import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Direction;
-import org.joml.Matrix4fStack;
+import org.apache.commons.lang3.ArrayUtils;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -22,6 +19,8 @@ import java.util.*;
 import java.util.function.Function;
 
 public class ModelHelper {
+    public static final ThreadLocal<Boolean> FLIP_CUBOIDS = ThreadLocal.withInitial(() -> false);
+
     public static HijackedModel getThickenedModel(Model original, Function<Identifier, RenderLayer> layerFactory, float scale){
         ModelPart root = original.getRootPart();
         ModelPart thickenedRoot = thickenedModelPart(root, scale);
@@ -38,11 +37,11 @@ public class ModelHelper {
     private static ModelPart thickenedModelPart(ModelPart original, float scale, MatrixStack stack){
         //push matrix stack so that we can apply the models offsets
         stack.push();
-        stack.translate(original.originX, original.originY, original.originZ);
+       /* stack.translate(original.originX, original.originY, original.originZ);
         if (original.pitch != 0.0F || original.yaw != 0.0F || original.roll != 0.0F) {
             stack.multiply(new Quaternionf().rotationYXZ(original.yaw, original.pitch, original.roll));
-        }
-        if (original.pitch != 0.0F || original.yaw != 0.0F || original.roll != 0.0F) {
+        }*/
+        if (original.xScale != 1.0F || original.yScale != 1.0F || original.zScale != 1.0F) {
             stack.scale(original.xScale, original.yScale, original.zScale);
         }
 
@@ -51,12 +50,10 @@ public class ModelHelper {
 
         List<ModelPart.Cuboid> thickCuboids = new ArrayList<>();
         for(var cuboid: cuboids){
-            ModelPart.Quad[] cubeQuads = ((ModelPart_CuboidAccessor)cuboid).enchantOutline$getSides();
-            List<BakedQuad> bakedQuads = ModelHelper.modelPartQuadToBakedQuad(cubeQuads, stack);
-
-            List<BakedQuad> thickQuads = QuadHelper.thickenQuad(bakedQuads, scale);
-            List<ModelPart.Cuboid> thickFaceCuboid = ModelHelper.bakedQuadToCuboid(thickQuads);
-            thickCuboids.addAll(thickFaceCuboid);
+            ModelPart_CuboidAccessor accessor = ((ModelPart_CuboidAccessor)cuboid);
+            for(Direction dir : accessor.enchantOutline$getDirections()){
+                thickCuboids.addAll(thickenCuboidFace(cuboid, dir, scale, stack));
+            }
         }
 
         Map<String, ModelPart> oldChildren = modelPartAccessor.enchantOutline$getChildren();
@@ -68,75 +65,103 @@ public class ModelHelper {
 
         ModelPart thickModelPart = new ModelPart(thickCuboids, newChildren);
         thickModelPart.setDefaultTransform(original.getDefaultTransform());
-        thickModelPart.setTransform(thickModelPart.getTransform());
+        ModelTransform trans = thickModelPart.getTransform();
+        thickModelPart.setTransform(trans);
 
         return thickModelPart;
     }
 
-    //instead of doing this make a base quad class that we can do the math to instead, and make everything more reliable
-    @Deprecated
-    private static List<BakedQuad> modelPartQuadToBakedQuad(ModelPart.Quad[] original, MatrixStack stack){
-        List<BakedQuad> newQuads = new ArrayList<>(original.length);
-        for(var quad : original){
-            var verts = quad.vertices();
-            int[] vertexData = new int[verts.length*8];
-            for(int i = 0; i < verts.length; i++)
-            {
-                float[] uvs = {verts[i].u(),verts[i].v()};//BetterEnchants.getConfig().getCustomOrCurrentUV(verts[i].u(), verts[i].v(), isArmor)
-                Vector3f vertexPos = new Vector3f(verts[i].x(), verts[i].y(), verts[i].z());
-                //apply the transforms
-                vertexPos = VertexHelper.transformVector(stack, vertexPos);
-                /*vertexPos.rotate(new Quaternionf().rotationXYZ(roll, yaw, pitch));
-                vertexPos.mul(xScale, yScale, zScale);
-                vertexPos.add(originX, originY, originZ);*/
+    private static List<ModelPart.Cuboid> thickenCuboidFace(ModelPart.Cuboid original, Direction dir, float scale, MatrixStack stack){
+        List<ModelPart.Cuboid> thickenedCuboids = new ArrayList<>(4);
 
-                VertexHelper.packVertexData(vertexData, i, vertexPos, uvs[0], uvs[1]);
+        Vector3f normal = new Vector3f(dir.getUnitVector());
+        normal.mul(scale);
+
+        ModelPart_CuboidAccessor accessor = ((ModelPart_CuboidAccessor)original);
+
+        Vector3f[] verts;
+
+        int u = accessor.enchantOutline$getU();
+        int v = accessor.enchantOutline$getV();
+
+        float x = original.minX;
+        float y = original.minY;
+        float z = original.minZ;
+
+        Vector3f startPos = new Vector3f(x, y, z);
+
+        float sizeX = original.maxX - x;
+        float sizeY = original.maxY - y;
+        float sizeZ = original.maxZ - z;
+
+        //TODO: use these to calculate a new scale so things have a consistent outline size
+        float extraX = accessor.enchantOutline$getExtraX();
+        float extraY = accessor.enchantOutline$getExtraY();
+        float extraZ = accessor.enchantOutline$getExtraZ();
+
+        boolean mirror = accessor.enchantOutline$getMirror();
+
+        float f = x + sizeX;
+        float g = y + sizeY;
+        float h = z + sizeZ;
+        x -= extraX;
+        y -= extraY;
+        z -= extraZ;
+        f += extraX;
+        g += extraY;
+        h += extraZ;
+        if (mirror) {
+            float i = f;
+            f = x;
+            x = i;
+        }
+
+        Vector3f vertex = new Vector3f(x, y, z);
+        Vector3f vertex2 = new Vector3f(f, y, z);
+        Vector3f vertex3 = new Vector3f(f, g, z);
+        Vector3f vertex4 = new Vector3f(x, g, z);
+        Vector3f vertex5 = new Vector3f(x, y, h);
+        Vector3f vertex6 = new Vector3f(f, y, h);
+        Vector3f vertex7 = new Vector3f(f, g, h);
+        Vector3f vertex8 = new Vector3f(x, g, h);
+
+        VertexHelper.transformVector(stack, vertex);
+        VertexHelper.transformVector(stack, vertex2);
+        VertexHelper.transformVector(stack, vertex3);
+        VertexHelper.transformVector(stack, vertex4);
+        VertexHelper.transformVector(stack, vertex5);
+        VertexHelper.transformVector(stack, vertex6);
+        VertexHelper.transformVector(stack, vertex7);
+        VertexHelper.transformVector(stack, vertex8);
+
+        if(dir.equals(Direction.DOWN)){
+            verts = new Vector3f[]{vertex6, vertex5, vertex, vertex2};
+        }else if(dir.equals(Direction.UP)){
+            verts = new Vector3f[]{vertex3, vertex4, vertex8, vertex7};
+        }else if(dir.equals(Direction.WEST)){
+            verts = new Vector3f[]{vertex, vertex5, vertex8, vertex4};
+        }else if(dir.equals(Direction.NORTH)){
+            verts = new Vector3f[]{vertex2, vertex, vertex4, vertex3};
+        }else if(dir.equals(Direction.EAST)){
+            verts = new Vector3f[]{vertex6, vertex2, vertex3, vertex7};
+        }else {
+            verts = new Vector3f[]{vertex5, vertex6, vertex7, vertex8};
+        }
+
+        //EnchantmentGlintOutline.LOGGER.info("scale1: {}", scale);
+        //scale = (scale * (extraX*2 + sizeX)/sizeX);
+        //EnchantmentGlintOutline.LOGGER.info("scale2: {}", scale);
+        Vector3f[] cardinalDirs = VertexHelper.getFaceCardinalDirs(verts, scale);
+        if(cardinalDirs != null) {
+            for (Vector3f cardDir : cardinalDirs) {
+                Vector3f movedPos = VertexHelper.growVert(startPos, cardDir, normal);
+                //movedPos.sub(startPos).mul(1/((extraX + sizeX)/sizeX), 1/((extraY + sizeY)/sizeY), 1/((extraZ + sizeZ)/sizeZ)).add(startPos);
+                ModelHelper.FLIP_CUBOIDS.set(true);
+                thickenedCuboids.add(new ModelPart.Cuboid(u, v, movedPos.x(), movedPos.y(), movedPos.z(), sizeX, sizeY, sizeZ, extraX, extraY, extraZ, mirror, accessor.enchantOutline$getTextureWidth(), accessor.enchantOutline$getTextureHeight(), Set.of(dir)));
+                ModelHelper.FLIP_CUBOIDS.set(false);
             }
-
-            BakedQuad enchantmentQuad = new BakedQuad(vertexData, 0, Direction.fromVector((int)quad.direction().x(), (int)quad.direction().y(), (int)quad.direction().z(), Direction.NORTH), null, false, 100);
-            newQuads.add(enchantmentQuad);
         }
-        return newQuads;
-    }
 
-    @Deprecated
-    public static List<ModelPart.Cuboid> bakedQuadToCuboid(List<BakedQuad> original){
-        List<ModelPart.Cuboid> newCuboids = new ArrayList<>(original.size());
-        for(BakedQuad baked : original){
-            VertexHelper.Vertex[] verts = VertexHelper.getVertexData(baked.vertexData());
-            if(verts.length == 4){
-                ModelPart.Vertex[] newVerts = new ModelPart.Vertex[verts.length];
-                for(int i = 0; i < verts.length; i++){
-                    VertexHelper.Vertex vert = verts[i];
-                    newVerts[i] = new ModelPart.Vertex(vert.pos().x(), vert.pos().y(), vert.pos().z(), vert.u(), vert.v());
-                }
-                ModelPart.Quad[] quadOut = {new ModelPart.Quad(newVerts, baked.face().getFloatVector())};
-
-                //EnchantmentGlintOutline.LOGGER.info("yooooooo: {}", baked.face());
-                //boolean mirror = baked.face().equals(Direction.EAST);
-                Direction dir = baked.face();
-                if(FabricLoader.getInstance().isModLoaded("sodium")){
-                    if(dir.equals(Direction.EAST)){
-                        dir = Direction.WEST;
-                    }
-                    if(dir.equals(Direction.UP)){
-                        dir = Direction.DOWN;
-                    }
-                    if(dir.equals(Direction.NORTH)){
-                        dir = Direction.SOUTH;
-                    }
-                }
-
-                SodiumHelper.getSetQuads().set(quadOut);
-
-                ModelPart.Cuboid newCuboid = new ModelPart.Cuboid(0,0, verts[0].pos().x(), verts[0].pos().y(), verts[0].pos().z(), verts[2].pos().x() - verts[0].pos().x(), verts[2].pos().y() - verts[0].pos().y(), verts[2].pos().z() - verts[0].pos().z(), 0 ,0 ,0, false, 1, 1, Set.of(dir));
-                ((ModelPart_CuboidAccessor)newCuboid).enchantOutline$SetSides(quadOut);
-
-                SodiumHelper.getSetQuads().remove();
-
-                newCuboids.add(newCuboid);
-                }
-        }
-        return newCuboids;
+        return thickenedCuboids;
     }
 }

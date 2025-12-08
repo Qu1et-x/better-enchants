@@ -1,12 +1,10 @@
 package net.enchantoutline.mixin;
 
-import net.enchantoutline.events.RenderQuads;
 import net.enchantoutline.mixin_accessors.ModelPart_CuboidAccessor;
+import net.enchantoutline.util.ModelHelper;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.Direction;
+import org.apache.commons.lang3.ArrayUtils;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -32,7 +30,14 @@ public class ModelPart_CuboidMixin implements ModelPart_CuboidAccessor {
         this.mirror = mirror;
         this.textureWidth = textureWidth;
         this.textureHeight = textureHeight;
-        this.initDirections = new HashSet<>(sides);
+        this.directions = new HashSet<>(sides);
+
+        if(ModelHelper.FLIP_CUBOIDS.get()){
+            for (ModelPart.Quad quad : this.sides){
+                ArrayUtils.swap(quad.vertices(), 0, 3);
+                ArrayUtils.swap(quad.vertices(), 1, 2);
+            }
+        }
     }
 
     @Unique
@@ -60,17 +65,7 @@ public class ModelPart_CuboidMixin implements ModelPart_CuboidAccessor {
     private float textureHeight;
 
     @Unique
-    private Set<Direction> initDirections;
-
-    @Override
-    public ModelPart.Quad[] enchantOutline$getSides() {
-        return sides;
-    }
-
-    @Override
-    public void enchantOutline$SetSides(ModelPart.Quad[] newSides) {
-        sides = newSides;
-    }
+    private Set<Direction> directions;
 
     @Override
     public int enchantOutline$getU() {
@@ -113,7 +108,7 @@ public class ModelPart_CuboidMixin implements ModelPart_CuboidAccessor {
     }
 
     @Override
-    public Set<Direction> enchantOutline$getInitDirections() {
-        return new HashSet<>();
+    public Set<Direction> enchantOutline$getDirections() {
+        return new HashSet<>(directions);
     }
 }
