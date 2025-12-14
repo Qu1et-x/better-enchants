@@ -10,7 +10,6 @@ import net.enchantoutline.events.sodium.ModelCuboidInitBeforeReturnCallback;
 import net.enchantoutline.mixin_accessors.*;
 import net.enchantoutline.mixin_accessors.sodium.ModelCuboidAccessor;
 import net.enchantoutline.model.HijackedModel;
-import net.enchantoutline.modmixinutil.SodiumHelper;
 import net.enchantoutline.shader.Shaders;
 import net.enchantoutline.util.CustomRenderLayers;
 import net.enchantoutline.util.ModelHelper;
@@ -372,33 +371,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		//---------- End Item Type Storage ----------
 
 		//---------- Mod Patches ----------
-		if(FabricLoader.getInstance().isModLoaded("sodium")){
-			ModelCuboidInitBeforeReturnCallback.EVENT.register(((receiver, u, v, x1, y1, z1, sizeX, sizeY, sizeZ, extraX, extraY, extraZ, mirror, textureWidth, textureHeight, renderDirections) -> {
-				{
-					ModelPart.Quad[] quads = SodiumHelper.getSetQuads().get();
-					if(quads != null && quads.length > 0){
-						long[] textures = new long[24];
-						ModelPart.Quad quad = quads[0];
-						for(int i = 0; i < quad.vertices().length; i++){
-							ModelPart.Vertex vert = quad.vertices()[i];
-							for(int j = 0; j < 6; j++){
-								textures[j * 4 + i] = Int2.pack(Float.floatToRawIntBits(vert.u()), Float.floatToRawIntBits(vert.v()));
-							}
-						}
-						if(renderDirections.contains(Direction.EAST)){
-							for(int faceIndex = 0; faceIndex < 6; ++faceIndex) {
-								int vertexOffset = faceIndex * 4;
-								ArrayUtils.swap(textures, vertexOffset + 0, vertexOffset + 2);
-								ArrayUtils.swap(textures, vertexOffset + 1, vertexOffset + 3);
-							}
-						}
-						ModelCuboidAccessor accessor = (ModelCuboidAccessor)receiver;
-						accessor.enchantOutline$setUvs(textures);
-					}
-					return ActionResult.PASS;
-				}
-			}));
-		}
+
 		//--------- End Mod Patches ----------
 	}
 

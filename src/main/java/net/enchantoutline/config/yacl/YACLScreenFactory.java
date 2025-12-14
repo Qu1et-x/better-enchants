@@ -13,6 +13,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 
 import java.awt.*;
 
@@ -59,7 +60,10 @@ public class YACLScreenFactory {
                                 .build())
                         .group(ListOption.<ItemOverrideContainer>createBuilder()
                                 .name(Text.translatable("list.enchantoutline.override.item"))
-                                .description(OptionDescription.of(Text.translatable("tooltip.list.enchantoutline.override.item")))
+                                .description(OptionDescription.createBuilder()
+                                        .text(Text.translatable("tooltip.list.enchantoutline.override.item"))
+                                        .webpImage(Identifier.of(EnchantmentGlintOutline.MOD_ID, "textures/listexplained.webp"))
+                                        .build())
                                 .binding(defaultConfig.getItemOverridesAsContainerList(), EnchantmentGlintOutline.getConfig()::getItemOverridesAsContainerList, EnchantmentGlintOutline.getConfig()::setItemOverridesFromContainerList)
                                 .controller(ItemOverrideContainerControllerBuilderImpl::new)
                                 .initial(ItemOverrideContainer::new)
@@ -91,7 +95,10 @@ public class YACLScreenFactory {
                                 .build())
                         .group(ListOption.<ItemOverrideContainer>createBuilder()
                                 .name(Text.translatable("list.enchantoutline.override.equipment"))
-                                .description(OptionDescription.of(Text.translatable("tooltip.list.enchantoutline.override.equipment")))
+                                .description(OptionDescription.createBuilder()
+                                        .text(Text.translatable("tooltip.list.enchantoutline.override.equipment"))
+                                        .webpImage(Identifier.of(EnchantmentGlintOutline.MOD_ID, "textures/listexplained.webp"))
+                                        .build())
                                 .binding(defaultConfig.getArmorOverridesAsContainerList(), EnchantmentGlintOutline.getConfig()::getArmorOverridesAsContainerList, EnchantmentGlintOutline.getConfig()::setArmorOverridesFromContainerList)
                                 .controller(ItemOverrideContainerControllerBuilderImpl::new)
                                 .initial(ItemOverrideContainer::new)
