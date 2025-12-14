@@ -2,13 +2,10 @@ package net.enchantoutline;
 
 import it.unimi.dsi.fastutil.Function;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
-import net.caffeinemc.mods.sodium.client.util.Int2;
 import net.enchantoutline.config.EnchantmentOutlineConfig;
 import net.enchantoutline.config.ItemOverride;
 import net.enchantoutline.events.*;
-import net.enchantoutline.events.sodium.ModelCuboidInitBeforeReturnCallback;
 import net.enchantoutline.mixin_accessors.*;
-import net.enchantoutline.mixin_accessors.sodium.ModelCuboidAccessor;
 import net.enchantoutline.model.HijackedModel;
 import net.enchantoutline.shader.Shaders;
 import net.enchantoutline.util.CustomRenderLayers;
@@ -17,9 +14,9 @@ import net.enchantoutline.util.QuadHelper;
 import net.enchantoutline.util.RenderLayerHelper;
 import net.fabricmc.api.ModInitializer;
 
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.RenderLayers;
 import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.client.render.entity.TridentEntityRenderer;
 import net.minecraft.client.render.item.ItemRenderState;
@@ -30,8 +27,6 @@ import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Direction;
-import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +67,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 	}
 
 	private static RenderLayer getTargetEnchantGlintLayer(){
-		return RenderLayer.getArmorEntityGlint();
+		return RenderLayers.armorEntityGlint();
 	}
 
 	private static RenderLayer getTargetEnchantColorLayer(){
@@ -80,7 +75,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 	}
 
 	private static RenderLayer getTargetEnchantZFixLayer(){
-		return RenderLayer.getWaterMask();
+		return RenderLayers.waterMask();
 	}
 
     @Override
@@ -203,7 +198,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 
 		TridentEntityRendererQueueEnchantedCallback.EVENT.register(((queueHolder, queue, model, s, matrixStack, renderLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand) -> {
 			if(config.isEnabled()){
-				if(renderLayer.equals(RenderLayer.getEntityGlint())){
+				if(renderLayer.equals(RenderLayers.entityGlint())){
 					@Nullable ItemOverride override = getOverrideFromNullableItem(config::getItemOverride, Items.TRIDENT);
 					if(override == null || override.shouldRender()){
 						float scale = config.getScaleFactorFromOutlineSize(config.getOutlineSizeOverrideOrDefault(override, true));

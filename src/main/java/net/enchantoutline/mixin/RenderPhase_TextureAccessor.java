@@ -1,4 +1,4 @@
-package net.enchantoutline.mixin;
+/*package net.enchantoutline.mixin;
 
 import net.minecraft.client.render.RenderPhase;
 import net.minecraft.util.Identifier;
@@ -11,4 +11,4 @@ import java.util.Optional;
 public interface RenderPhase_TextureAccessor {
     @Invoker("getId")
     Optional<Identifier> invokeGetId();
-}
+}*/

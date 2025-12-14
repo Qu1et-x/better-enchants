@@ -1,4 +1,4 @@
-package net.enchantoutline.mixin;
+/*package net.enchantoutline.mixin;
 
 import net.enchantoutline.mixin_accessors.MultiPhaseParametersAccessor;
 import net.minecraft.client.render.RenderLayer;
@@ -18,4 +18,4 @@ public class MultiPhaseParametersMixin implements MultiPhaseParametersAccessor {
     public RenderPhase.TextureBase enchantOutline$getTexture() {
         return texture;
     }
-}
+}*/

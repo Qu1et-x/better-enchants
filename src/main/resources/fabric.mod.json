@@ -22,6 +22,7 @@
 			"net.enchantoutline.config.ModMenuIntegration"
 		]
 	},
+	"accessWidener" : "enchantment-glint-outline.accesswidener",
 	"mixins": [
 		"enchantment-glint-outline.mixins.json"
 	],

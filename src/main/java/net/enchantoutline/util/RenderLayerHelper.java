@@ -1,22 +1,31 @@
 package net.enchantoutline.util;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import net.enchantoutline.mixin.RenderLayerMultiPhaseAccessor;
-import net.enchantoutline.mixin.RenderPhase_TextureAccessor;
-import net.enchantoutline.mixin_accessors.MultiPhaseParametersAccessor;
+import net.enchantoutline.mixin.RenderSetupAccessor;
+import net.enchantoutline.mixin_accessors.RenderLayerAccessor;
 import net.enchantoutline.mixin_accessors.RenderPipelineAccessor;
+import net.enchantoutline.shader.Shaders;
+import net.minecraft.client.gl.GpuSampler;
 import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.RenderPhase;
+import net.minecraft.client.render.RenderSetup;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class RenderLayerHelper {
+    public static final Logger LOGGER = LoggerFactory.getLogger(RenderLayerHelper.class);
+
     public static boolean isRenderLayerDoubleSided(RenderLayer renderLayer){
-        if(renderLayer instanceof RenderLayer.MultiPhase phase){
-            RenderPipeline pipeline = ((RenderLayerMultiPhaseAccessor)(Object)phase).getPipeline();
+        RenderSetup setup = ((RenderLayerAccessor)renderLayer).enchantOutline$getRenderSetup();
+        if(setup != null){
+            RenderPipeline pipeline = ((RenderSetupAccessor)(Object)setup).getPipeline();
             if(pipeline != null){
                 return !((RenderPipelineAccessor)pipeline).enchantOutline$getCull();
             }
@@ -25,31 +34,47 @@ public class RenderLayerHelper {
     }
 
     @Nullable
-    public static Identifier getIdentifierFromRenderLayer(RenderLayer renderLayer){
-        if(renderLayer instanceof RenderLayer.MultiPhase phase) {
-            RenderLayer.MultiPhaseParameters params = ((RenderLayerMultiPhaseAccessor) (Object) phase).getPhases();
-            if (params != null) {
-                RenderPhase.TextureBase textureBase = ((MultiPhaseParametersAccessor) (Object) params).enchantOutline$getTexture();
-                if (textureBase != null) {
-                    Optional<Identifier> texture = ((RenderPhase_TextureAccessor) textureBase).invokeGetId();
-                    if (texture.isPresent()) {
-                        return texture.orElseThrow();
-                    }
+    public static Map<String, Shaders.TextureSpec> getIdentifierFromRenderLayer(RenderLayer renderLayer){
+        RenderSetup setup = ((RenderLayerAccessor)renderLayer).enchantOutline$getRenderSetup();
+        if(setup != null) {
+            Map<String, RenderSetup.TextureSpec> textureBase = ((RenderSetupAccessor) (Object) setup).getTextures();
+            if (textureBase != null) {
+                Map<String, Shaders.TextureSpec> newMap = new HashMap<>(textureBase.size());
+                for(var entry : textureBase.entrySet()){
+                    newMap.put(entry.getKey(), new Shaders.TextureSpec(entry.getValue().location(), entry.getValue().sampler()));
                 }
+                return newMap;
             }
         }
         return null;
     }
 
-    public static RenderLayer renderLayerFromRenderLayerDoubleSided(RenderLayer renderLayer, CustomRenderLayers customRenderLayers, Function<Identifier, RenderLayer> doubleSidedFactory, Function<Identifier, RenderLayer> singleSidedFactory, RenderLayer fallback, boolean isDoubleSided){
-        return renderLayerFromIdentifierDoubleSided(getIdentifierFromRenderLayer(renderLayer), customRenderLayers, doubleSidedFactory, singleSidedFactory, fallback, isDoubleSided);
+    public static RenderLayer renderLayerFromRenderLayerDoubleSided(RenderLayer renderLayer, CustomRenderLayers customRenderLayers, Function<Map<String, Shaders.TextureSpec>, RenderLayer> doubleSidedFactory, Function<Map<String, Shaders.TextureSpec>, RenderLayer> singleSidedFactory, RenderLayer fallback, boolean isDoubleSided){
+        return renderLayerFromMapDoubleSided(getIdentifierFromRenderLayer(renderLayer), customRenderLayers, doubleSidedFactory, singleSidedFactory, fallback, isDoubleSided);
     }
 
-    public static RenderLayer renderLayerFromIdentifierDoubleSided(Identifier identifier, CustomRenderLayers customRenderLayers, Function<Identifier, RenderLayer> doubleSidedFactory, Function<Identifier, RenderLayer> singleSidedFactory, RenderLayer fallback, boolean isDoubleSided){
+    public static RenderLayer renderLayerFromIdentifierDoubleSided(@Nullable Identifier identifier, CustomRenderLayers customRenderLayers, Function<Identifier, RenderLayer> doubleSidedFactory, Function<Identifier, RenderLayer> singleSidedFactory, RenderLayer fallback, boolean isDoubleSided){
         if(isDoubleSided){
             return renderLayerFromIdentifierWithFallback(identifier, (id) -> getOrCreateRenderLayer(customRenderLayers, doubleSidedFactory, identifier, identifier.toString() + "_db"), fallback);
         }
         return renderLayerFromIdentifierWithFallback(identifier, (id) -> getOrCreateRenderLayer(customRenderLayers, singleSidedFactory, identifier), fallback);
+    }
+
+    public static RenderLayer renderLayerFromMapDoubleSided(@Nullable Map<String, Shaders.TextureSpec> identifier, CustomRenderLayers customRenderLayers, Function<Map<String, Shaders.TextureSpec>, RenderLayer> doubleSidedFactory, Function<Map<String, Shaders.TextureSpec>, RenderLayer> singleSidedFactory, RenderLayer fallback, boolean isDoubleSided){
+        if(isDoubleSided){
+            return renderLayerFromMapWithFallback(identifier, (id) -> getOrCreateRenderLayerMap(customRenderLayers, doubleSidedFactory, identifier, identifier.toString() + "_db"), fallback);
+        }
+        return renderLayerFromMapWithFallback(identifier, (id) -> getOrCreateRenderLayerMap(customRenderLayers, singleSidedFactory, identifier, identifier.toString()), fallback);
+    }
+
+    public static RenderLayer renderLayerFromMapWithFallback(@Nullable Map<String, Shaders.TextureSpec> identifier, Function<Map<String, Shaders.TextureSpec>, RenderLayer> layerFactory, RenderLayer fallback){
+        if(identifier != null){
+            RenderLayer newLayer = layerFactory.apply(identifier);
+            if(newLayer != null){
+                return newLayer;
+            }
+        }
+        return fallback;
     }
 
     public static RenderLayer renderLayerFromIdentifierWithFallback(@Nullable Identifier identifier, Function<Identifier, RenderLayer> layerFactory, RenderLayer fallback){
@@ -60,6 +85,16 @@ public class RenderLayerHelper {
             }
         }
         return fallback;
+    }
+
+    @Nullable
+    public static RenderLayer getOrCreateRenderLayerMap(CustomRenderLayers customRenderLayers, Function<Map<String, Shaders.TextureSpec>, RenderLayer> layerFactory, Map<String, Shaders.TextureSpec> identifier, String storagePath){
+        RenderLayer output = customRenderLayers.getCustomRenderLayer(identifier.toString());
+        if(output != null)
+        {
+            return output;
+        }
+        return customRenderLayers.addCustomRenderLayer(identifier.toString(), layerFactory.apply(identifier));
     }
 
     @Nullable
