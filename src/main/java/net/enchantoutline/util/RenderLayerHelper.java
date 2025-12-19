@@ -89,22 +89,22 @@ public class RenderLayerHelper {
 
     @Nullable
     public static RenderLayer getOrCreateRenderLayerMap(CustomRenderLayers customRenderLayers, Function<Map<String, Shaders.TextureSpec>, RenderLayer> layerFactory, Map<String, Shaders.TextureSpec> identifier, String storagePath){
-        RenderLayer output = customRenderLayers.getCustomRenderLayer(identifier.toString());
+        RenderLayer output = customRenderLayers.getCustomRenderLayer(storagePath);
         if(output != null)
         {
             return output;
         }
-        return customRenderLayers.addCustomRenderLayer(identifier.toString(), layerFactory.apply(identifier));
+        return customRenderLayers.addCustomRenderLayer(storagePath, layerFactory.apply(identifier));
     }
 
     @Nullable
     public static RenderLayer getOrCreateRenderLayer(CustomRenderLayers customRenderLayers, Function<Identifier, RenderLayer> layerFactory, Identifier identifier, String storagePath){
-        RenderLayer output = customRenderLayers.getCustomRenderLayer(identifier.toString());
+        RenderLayer output = customRenderLayers.getCustomRenderLayer(storagePath);
         if(output != null)
         {
             return output;
         }
-        return customRenderLayers.addCustomRenderLayer(identifier.toString(), layerFactory.apply(identifier));
+        return customRenderLayers.addCustomRenderLayer(storagePath, layerFactory.apply(identifier));
     }
 
     @Nullable
