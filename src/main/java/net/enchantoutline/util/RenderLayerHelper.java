@@ -53,13 +53,6 @@ public class RenderLayerHelper {
         return renderLayerFromMapDoubleSided(getIdentifierFromRenderLayer(renderLayer), customRenderLayers, doubleSidedFactory, singleSidedFactory, fallback, isDoubleSided);
     }
 
-    public static RenderLayer renderLayerFromIdentifierDoubleSided(@Nullable Identifier identifier, CustomRenderLayers customRenderLayers, Function<Identifier, RenderLayer> doubleSidedFactory, Function<Identifier, RenderLayer> singleSidedFactory, RenderLayer fallback, boolean isDoubleSided){
-        if(isDoubleSided){
-            return renderLayerFromIdentifierWithFallback(identifier, (id) -> getOrCreateRenderLayer(customRenderLayers, doubleSidedFactory, identifier, identifier.toString() + "_db"), fallback);
-        }
-        return renderLayerFromIdentifierWithFallback(identifier, (id) -> getOrCreateRenderLayer(customRenderLayers, singleSidedFactory, identifier), fallback);
-    }
-
     public static RenderLayer renderLayerFromMapDoubleSided(@Nullable Map<String, Shaders.TextureSpec> identifier, CustomRenderLayers customRenderLayers, Function<Map<String, Shaders.TextureSpec>, RenderLayer> doubleSidedFactory, Function<Map<String, Shaders.TextureSpec>, RenderLayer> singleSidedFactory, RenderLayer fallback, boolean isDoubleSided){
         if(isDoubleSided){
             return renderLayerFromMapWithFallback(identifier, (id) -> getOrCreateRenderLayerMap(customRenderLayers, doubleSidedFactory, identifier, identifier.toString() + "_db"), fallback);
@@ -68,16 +61,6 @@ public class RenderLayerHelper {
     }
 
     public static RenderLayer renderLayerFromMapWithFallback(@Nullable Map<String, Shaders.TextureSpec> identifier, Function<Map<String, Shaders.TextureSpec>, RenderLayer> layerFactory, RenderLayer fallback){
-        if(identifier != null){
-            RenderLayer newLayer = layerFactory.apply(identifier);
-            if(newLayer != null){
-                return newLayer;
-            }
-        }
-        return fallback;
-    }
-
-    public static RenderLayer renderLayerFromIdentifierWithFallback(@Nullable Identifier identifier, Function<Identifier, RenderLayer> layerFactory, RenderLayer fallback){
         if(identifier != null){
             RenderLayer newLayer = layerFactory.apply(identifier);
             if(newLayer != null){

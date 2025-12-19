@@ -103,10 +103,6 @@ public class Shaders {
                     .build()
     );
 
-    public static RenderLayer createGlintRenderLayerCull(Identifier texture) {
-        return createGlintRenderLayerCull(Map.of("sampler0", new TextureSpec(texture, () -> null)));
-    }
-
     public static RenderLayer createGlintRenderLayerCull(Map<String, TextureSpec> specMap){
         RenderSetup.Builder builder = RenderSetup.builder(CUTOUT_PIPELINE_DEPTH_CULL)
                 .useLightmap()
@@ -115,10 +111,6 @@ public class Shaders {
             builder = builder.texture(entry.getKey(), entry.getValue().location(), entry.getValue().sampler());
         }
         return RenderLayer.of("enchout_glint_model", builder.build());
-    }
-
-    public static RenderLayer createGlintRenderLayerNoCull(Identifier texture) {
-        return createGlintRenderLayerNoCull(Map.of("sampler0", new TextureSpec(texture, () -> null)));
     }
 
     public static RenderLayer createGlintRenderLayerNoCull(Map<String, TextureSpec> specMap) {
@@ -135,10 +127,6 @@ public class Shaders {
     }
 
     //no overlay, whatever that means
-    public static RenderLayer createColorRenderLayerCull(Identifier texture) {
-        return createColorRenderLayerCull(Map.of("sampler0", new TextureSpec(texture, () -> null)));
-    }
-
     public static RenderLayer createColorRenderLayerCull(Map<String, TextureSpec> specMap) {
         RenderSetup.Builder builder = RenderSetup.builder(CUTOUT_PIPELINE_COLOR_CULL)
                 .useLightmap()
@@ -157,10 +145,6 @@ public class Shaders {
     }
 
     //again no overlay
-    public static RenderLayer createColorRenderLayerNoCull(Identifier texture) {
-        return createColorRenderLayerNoCull(Map.of("sampler0", new TextureSpec(texture, () -> null)));
-    }
-
     public static RenderLayer createColorRenderLayerNoCull(Map<String, TextureSpec> specMap) {
         RenderSetup.Builder builder = RenderSetup.builder(CUTOUT_PIPELINE_COLOR_NOCULL)
                 .useLightmap()
@@ -178,10 +162,6 @@ public class Shaders {
         return layer;
     }
 
-    public static RenderLayer createZFixRenderLayerCull(Identifier texture) {
-        return createZFixRenderLayerCull(Map.of("sampler0", new TextureSpec(texture, () -> null)));
-    }
-
     public static RenderLayer createZFixRenderLayerCull(Map<String, TextureSpec> specMap) {
         RenderSetup.Builder builder = RenderSetup.builder(CUTOUT_PIPELINE_DEPTH_CULL);
 
@@ -190,10 +170,6 @@ public class Shaders {
         }
 
         return RenderLayer.of("enchout_zfix_model", builder.build());
-    }
-
-    public static RenderLayer createZFixRenderLayerNoCull(Identifier texture){
-        return createZFixRenderLayerNoCull(Map.of("sampler0", new TextureSpec(texture, () -> null)));
     }
 
     public static RenderLayer createZFixRenderLayerNoCull(Map<String, TextureSpec> specMap) {

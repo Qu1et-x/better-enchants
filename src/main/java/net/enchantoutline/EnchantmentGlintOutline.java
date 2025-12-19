@@ -173,11 +173,12 @@ public class EnchantmentGlintOutline implements ModInitializer {
 					model.setAngles(s);
 
 					float scale = config.getScaleFactorFromOutlineSize(config.getOutlineSizeOverrideOrDefault(override, true));
+					//should create it straight from the identifier but it's just not working, this does. hence the garbage
+					RenderLayer garbageHackPatchLayer = RenderLayers.armorCutoutNoCull(texture);
 					if(config.getRenderSolidOverrideOrDefault(override, true)){
 						int tint = config.getOutlineColorAsInt(config.getOutlineColorOverrideOrDefault(override));
 
 						//armor is literally always double-sided, the equipment renderer forces it to use double-sided.
-						RenderLayer garbageHackPatchLayer = RenderLayers.armorCutoutNoCull(texture);
 						RenderLayer colorLayer = RenderLayerHelper.renderLayerFromRenderLayerDoubleSided(garbageHackPatchLayer, COLOR_LAYERS, Shaders::createColorRenderLayerNoCull, Shaders::createColorRenderLayerCull, Shaders.COLOR_CUTOUT_LAYER, true); //RenderLayerHelper.renderLayerFromIdentifierDoubleSided(texture, COLOR_LAYERS, Shaders::createColorRenderLayerNoCull, Shaders::createColorRenderLayerCull, Shaders.COLOR_CUTOUT_LAYER, true);
 
 						HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, layer -> Shaders.COLOR_CUTOUT_LAYER, scale);
@@ -185,7 +186,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 						queueHolder.getBatchingQueue(getColorBatchingQueue()).submitModel(thickColorModel, s, matrixStack, colorLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
 					}
 					else{
-						RenderLayer glintZLayer = RenderLayerHelper.renderLayerFromIdentifierDoubleSided(texture, GLINT_LAYERS, Shaders::createGlintRenderLayerNoCull, Shaders::createGlintRenderLayerCull, Shaders.GLINT_CUTOUT_LAYER, true);
+						RenderLayer glintZLayer = RenderLayerHelper.renderLayerFromRenderLayerDoubleSided(garbageHackPatchLayer, GLINT_LAYERS, Shaders::createGlintRenderLayerNoCull, Shaders::createGlintRenderLayerCull, Shaders.GLINT_CUTOUT_LAYER, true);
 
 						HijackedModel thickGlintZModel = ModelHelper.getThickenedModel(model, layer -> Shaders.GLINT_CUTOUT_LAYER, scale);
 
@@ -203,17 +204,18 @@ public class EnchantmentGlintOutline implements ModInitializer {
 					@Nullable ItemOverride override = getOverrideFromNullableItem(config::getItemOverride, Items.TRIDENT);
 					if(override == null || override.shouldRender()){
 						float scale = config.getScaleFactorFromOutlineSize(config.getOutlineSizeOverrideOrDefault(override, true));
+						RenderLayer garbageHackPatchLayer = model.getLayer(TridentEntityRenderer.TEXTURE);
 						if(config.getRenderSolidOverrideOrDefault(override, false)){
 							int tint = config.getOutlineColorAsInt(config.getOutlineColorOverrideOrDefault(override));
 
-							RenderLayer colorLayer = RenderLayerHelper.renderLayerFromIdentifierDoubleSided(TridentEntityRenderer.TEXTURE, COLOR_LAYERS, Shaders::createColorRenderLayerNoCull, Shaders::createColorRenderLayerCull, Shaders.COLOR_CUTOUT_LAYER, false);
+							RenderLayer colorLayer = RenderLayerHelper.renderLayerFromRenderLayerDoubleSided(garbageHackPatchLayer, COLOR_LAYERS, Shaders::createColorRenderLayerNoCull, Shaders::createColorRenderLayerCull, Shaders.COLOR_CUTOUT_LAYER, false);
 
 							HijackedModel thickColorModel = ModelHelper.getThickenedModel(model, layer -> Shaders.COLOR_CUTOUT_LAYER, scale);
 
 							queueHolder.getBatchingQueue(getColorBatchingQueue()).submitModel(thickColorModel, s, matrixStack, colorLayer, Integer.MAX_VALUE, 0, tint, sprite, outlineColor, crumblingOverlayCommand);
 						}
 						else{
-							RenderLayer glintZLayer = RenderLayerHelper.renderLayerFromIdentifierDoubleSided(TridentEntityRenderer.TEXTURE, GLINT_LAYERS, Shaders::createGlintRenderLayerNoCull, Shaders::createGlintRenderLayerCull, Shaders.GLINT_CUTOUT_LAYER, false);
+							RenderLayer glintZLayer = RenderLayerHelper.renderLayerFromRenderLayerDoubleSided(garbageHackPatchLayer, GLINT_LAYERS, Shaders::createGlintRenderLayerNoCull, Shaders::createGlintRenderLayerCull, Shaders.GLINT_CUTOUT_LAYER, false);
 
 							HijackedModel thickGlintZModel = ModelHelper.getThickenedModel(model, layer -> Shaders.GLINT_CUTOUT_LAYER, scale);
 
