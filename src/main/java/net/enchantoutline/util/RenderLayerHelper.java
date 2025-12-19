@@ -5,7 +5,6 @@ import net.enchantoutline.mixin.RenderSetupAccessor;
 import net.enchantoutline.mixin_accessors.RenderLayerAccessor;
 import net.enchantoutline.mixin_accessors.RenderPipelineAccessor;
 import net.enchantoutline.shader.Shaders;
-import net.minecraft.client.gl.GpuSampler;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderSetup;
 import net.minecraft.util.Identifier;
@@ -13,11 +12,9 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class RenderLayerHelper {
     public static final Logger LOGGER = LoggerFactory.getLogger(RenderLayerHelper.class);

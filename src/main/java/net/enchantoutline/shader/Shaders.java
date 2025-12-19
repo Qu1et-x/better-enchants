@@ -126,8 +126,12 @@ public class Shaders {
         return RenderLayer.of("enchout_glint_model", builder.build());
     }
 
-    //no overlay, whatever that means
     public static RenderLayer createColorRenderLayerCull(Map<String, TextureSpec> specMap) {
+        return createColorRenderLayerCull(specMap, true);
+    }
+
+    //no overlay, whatever that means
+    public static RenderLayer createColorRenderLayerCull(Map<String, TextureSpec> specMap, boolean before) {
         RenderSetup.Builder builder = RenderSetup.builder(CUTOUT_PIPELINE_COLOR_CULL)
                 .useLightmap()
                 .crumbling();
@@ -139,13 +143,17 @@ public class Shaders {
         RenderLayer layer = RenderLayer.of("enchout_color_model", builder.build());
 
         RenderLayerAccessor accessor = (RenderLayerAccessor)layer;
-        accessor.enchantOutline$setDrawBeforeCustom(true);
-        accessor.enchantOutline$setShouldUseLayerBuffer(false);
+        accessor.enchantOutline$setDrawBeforeCustom(before);
+        accessor.enchantOutline$setShouldUseLayerBuffer(!before);
         return layer;
     }
 
-    //again no overlay
     public static RenderLayer createColorRenderLayerNoCull(Map<String, TextureSpec> specMap) {
+        return createColorRenderLayerNoCull(specMap ,true);
+    }
+
+    //again no overlay
+    public static RenderLayer createColorRenderLayerNoCull(Map<String, TextureSpec> specMap, boolean before) {
         RenderSetup.Builder builder = RenderSetup.builder(CUTOUT_PIPELINE_COLOR_NOCULL)
                 .useLightmap()
                 .crumbling();
@@ -157,8 +165,8 @@ public class Shaders {
         RenderLayer layer = RenderLayer.of("enchout_color_model", builder.build());
 
         RenderLayerAccessor accessor = (RenderLayerAccessor)layer;
-        accessor.enchantOutline$setDrawBeforeCustom(true);
-        accessor.enchantOutline$setShouldUseLayerBuffer(false);
+        accessor.enchantOutline$setDrawBeforeCustom(before);
+        accessor.enchantOutline$setShouldUseLayerBuffer(!before);
         return layer;
     }
 
