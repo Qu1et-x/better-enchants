@@ -12,14 +12,12 @@
 		"ModelPart_CuboidMixin",
 		"ModelPartMixin",
 		"OrderedRenderCommandQueueImplMixin",
-		"RenderLayerMultiPhaseAccessor",
-		"MultiPhaseParametersMixin",
-		"RenderPhase_TextureAccessor",
 		"EquipmentRendererMixin",
 		"RenderPipelineMixin",
 		"ItemModelManagerMixin",
 		"ItemRenderStateMixin",
 		"TridentEntityRendererMixin",
+		"RenderSetupAccessor",
 
 		"sodium.ModelCuboidMixin"
 	],

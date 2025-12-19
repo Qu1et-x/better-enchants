@@ -3,13 +3,20 @@ package net.enchantoutline.mixin;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import net.enchantoutline.mixin_accessors.RenderLayerAccessor;
 import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.RenderSetup;
 import org.jetbrains.annotations.Nullable;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(RenderLayer.class)
 public class RenderLayerMixin implements RenderLayerAccessor {
+
+    @Shadow
+    @Final
+    private RenderSetup renderSetup;
 
     @ModifyReturnValue(method = "areVerticesNotShared", at = @At("RETURN"))
     private boolean enchantOutline$areVerticesNotShared(boolean original){
@@ -28,6 +35,11 @@ public class RenderLayerMixin implements RenderLayerAccessor {
     @Unique
     //It's my mod I can do what I want.
     byte drawBeforeAfterCustom = 0;
+
+    @Override
+    public RenderSetup enchantOutline$getRenderSetup() {
+        return renderSetup;
+    }
 
     @Override
     public boolean enchantOutline$shouldUseLayerBuffer() {

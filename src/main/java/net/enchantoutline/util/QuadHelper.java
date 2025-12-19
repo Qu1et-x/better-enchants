@@ -14,8 +14,7 @@ public class QuadHelper {
     public static List<BakedQuad> thickenQuad(List<BakedQuad> original, float percentSize){
         List<BakedQuad> newQuads = new ArrayList<>(original.size()*4);
         for (BakedQuad quad : original) {
-            int[] vertexData = quad.vertexData().clone();
-            Vector3f[] defaultVerts = VertexHelper.getVertexPos(vertexData);
+            Vector3f[] defaultVerts = {new Vector3f(quad.position0()), new Vector3f(quad.position1()), new Vector3f(quad.position2()), new Vector3f(quad.position3())};
 
             Vec3i intVec = quad.face().getVector();
             Vector3f faceVec = new Vector3f(intVec.getX(), intVec.getY(), intVec.getZ());
@@ -26,9 +25,8 @@ public class QuadHelper {
                 for (Vector3f dir : cardinalDirs) {
                     Vector3f[] vertPoses = VertexHelper.growFace(defaultVerts, dir, faceVec);
 
-                    VertexHelper.setVertexData(vertexData, vertPoses);
-
-                    BakedQuad enchantmentQuad = new BakedQuad(VertexHelper.flip(vertexData), 0, quad.face().getOpposite(), null, false, 100);
+                    //VertexHelper.flip(vertexData)
+                    BakedQuad enchantmentQuad = new BakedQuad(vertPoses[3], vertPoses[2], vertPoses[1], vertPoses[0], quad.packedUV3(), quad.packedUV2(), quad.packedUV1(), quad.packedUV0(), 0, quad.face().getOpposite(), null, false, 100);
 
                     newQuads.add(enchantmentQuad);
                 }

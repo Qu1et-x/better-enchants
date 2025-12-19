@@ -22,12 +22,13 @@
 			"net.enchantoutline.config.ModMenuIntegration"
 		]
 	},
+	"accessWidener" : "enchantment-glint-outline.accesswidener",
 	"mixins": [
 		"enchantment-glint-outline.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.18.1",
-		"minecraft": "~1.21.9",
+		"minecraft": "~1.21.11",
 		"java": ">=21",
 		"fabric-api": "*"
 	},
