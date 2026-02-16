@@ -53,6 +53,9 @@ public class EnchantmentGlintOutline implements ModInitializer {
 	//I don't want to go out using a ThreadLocal like this but since we call to an interface class as a middleman I have no way to transfer the data all the way through
 	public static final ThreadLocal<ItemRenderState.LayerRenderState> LAYER_RENDER_STATE_RENDER_MODEL_STORAGE = new ThreadLocal<>();
 
+	// Tracks whether the special-model LayerRenderState render is currently drawing for the GUI (inventory)
+	public static final ThreadLocal<Boolean> LAYER_RENDER_STATE_IS_GUI = new ThreadLocal<>();
+
 	public static EnchantmentOutlineConfig getConfig()
 	{
 		return config;
@@ -90,7 +93,11 @@ public class EnchantmentGlintOutline implements ModInitializer {
 
 		//called before non-special item is rendered.
 		RenderQuads.Normal.Callback.EVENT.register((receiver, orderedRenderCommandQueue, matrixStack, itemDisplayContext, light, overlay, outlineColors, tintLayers, quads, renderLayer, glintType) -> {
-			if(config.isEnabled()){
+			// If the user disabled inventory outlines and this render is for the GUI, skip outlining
+			if (config != null && config.shouldDisableInventoryOutline() && itemDisplayContext == net.minecraft.item.ItemDisplayContext.GUI) {
+				return ActionResult.PASS;
+			}
+			if(config != null && config.isEnabled()){
 				if (glintType != ItemRenderState.Glint.NONE) {
 					@Nullable ItemOverride override = getOverrideFromLayerRenderState(config::getItemOverride, receiver);
 					if(override == null || override.shouldRender()){
@@ -123,7 +130,14 @@ public class EnchantmentGlintOutline implements ModInitializer {
 
 		//the other half of render solid for special items. They should either both use the renderCommandQueue or both avoid it though, this mix is not making me happy.
 		RenderQuads.Model.ModelPart.EVENT.register((receiver, part, matrices, renderLayer, light, overlay, sprite, sheeted, hasGlint, tintedColor, crumblingOverlay, i) -> {
-			if(config.isEnabled()){
+			// If the user disabled inventory outlines and this stored layer render state indicates GUI, skip outlining
+			if (config != null && config.shouldDisableInventoryOutline()) {
+				Boolean isGui = LAYER_RENDER_STATE_IS_GUI.get();
+				if (Boolean.TRUE.equals(isGui)) {
+					return ActionResult.PASS;
+				}
+			}
+			if(config != null && config.isEnabled()){
 				if(hasGlint){
 					ItemRenderState.LayerRenderState storedLayerRenderState = LAYER_RENDER_STATE_RENDER_MODEL_STORAGE.get();
 					@Nullable ItemOverride override = null;
@@ -170,7 +184,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 
 		EquipmentRendererQueueEnchantedCallback.EVENT.register((( queueHolder, renderedStack, queue, texture, model, s, matrixStack, renderLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand) -> {
 			//I can build this using the current renderLayer the model class is surprisingly simple. It just is made of a model part which I already am able to render an outline for. just build a new model every frame and we should be set
-			if(config.isEnabled()){
+			if(config != null && config.isEnabled()){
 				@Nullable ItemOverride override = null;
 				if(renderedStack != null){
 					override = getOverrideFromNullableItem(config::getArmorOverride, renderedStack.getItem());
@@ -205,7 +219,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		}));
 
 		TridentEntityRendererQueueEnchantedCallback.EVENT.register(((queueHolder, queue, model, s, matrixStack, renderLayer, light, overlay, tintColor, sprite, outlineColor, crumblingOverlayCommand) -> {
-			if(config.isEnabled()){
+			if(config != null && config.isEnabled()){
 				if(renderLayer.equals(RenderLayers.entityGlint())){
 					@Nullable ItemOverride override = getOverrideFromNullableItem(config::getItemOverride, Items.TRIDENT);
 					if(override == null || override.shouldRender()){
@@ -362,6 +376,8 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		//set the item right before we lose the type
 		LayerRenderStateRenderSpecial.Callback.EVENT.register(((receiver, specialModelRenderer, o, itemDisplayContext, matrixStack, orderedRenderCommandQueue, light, overlay, glint, i) -> {
 			LAYER_RENDER_STATE_RENDER_MODEL_STORAGE.set(receiver);
+			// also track whether this special-model render call is for the GUI (inventory)
+			LAYER_RENDER_STATE_IS_GUI.set(itemDisplayContext == net.minecraft.item.ItemDisplayContext.GUI);
 
 			return ActionResult.PASS;
 		}));
@@ -369,6 +385,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		//clear the item right after calling
 		LayerRenderStateRenderSpecial.Post.EVENT.register(((receiver, specialModelRenderer, o, itemDisplayContext, matrixStack, orderedRenderCommandQueue, light, overlay, glint, i) -> {
 			LAYER_RENDER_STATE_RENDER_MODEL_STORAGE.remove();
+			LAYER_RENDER_STATE_IS_GUI.remove();
 
 			return ActionResult.PASS;
 		}));

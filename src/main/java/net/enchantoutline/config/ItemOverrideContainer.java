@@ -3,13 +3,15 @@ package net.enchantoutline.config;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
+import net.minecraft.item.Items;
 
 public class ItemOverrideContainer {
     private String item;
     private final ItemOverride override;
 
     public ItemOverrideContainer(){
-        this(Registries.ITEM.getId(null).toString(), new ItemOverride());
+        // Avoid calling Registries.ITEM.getId(null) which can cause a NullPointerException.
+        this(Registries.ITEM.getId(Items.AIR).toString(), new ItemOverride());
     }
     public ItemOverrideContainer(ItemOverrideContainer from) {
         item = from.item;

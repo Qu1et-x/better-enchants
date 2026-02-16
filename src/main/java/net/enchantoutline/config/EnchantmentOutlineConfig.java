@@ -2,7 +2,6 @@ package net.enchantoutline.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.mojang.logging.LogUtils;
 import net.enchantoutline.EnchantmentGlintOutline;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.math.ColorHelper;
@@ -38,6 +37,9 @@ public class EnchantmentOutlineConfig {
     public boolean render_equipment_solid = false;
     public Map<String, ItemOverride> item_overrides = new HashMap<>();
     public Map<String, ItemOverride> equipment_overrides = new HashMap<>();
+
+    // New config: when true, do not render outlines for items in the player's inventory GUI
+    public boolean disable_inventory_outline = false;
 
     public Map<String, ItemOverride> overrides;
 
@@ -211,6 +213,15 @@ public class EnchantmentOutlineConfig {
             }
         }
         return getOutlineColor();
+    }
+
+    // New getter/setter for inventory outline disabling
+    public void setDisableInventoryOutline(boolean disable) {
+        this.disable_inventory_outline = disable;
+    }
+
+    public boolean shouldDisableInventoryOutline() {
+        return this.disable_inventory_outline;
     }
 
     public String toJson() {

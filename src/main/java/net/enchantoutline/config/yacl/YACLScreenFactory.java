@@ -3,16 +3,12 @@ package net.enchantoutline.config.yacl;
 import dev.isxander.yacl3.api.*;
 import dev.isxander.yacl3.api.controller.ColorControllerBuilder;
 import dev.isxander.yacl3.api.controller.FloatSliderControllerBuilder;
-import dev.isxander.yacl3.api.controller.ItemControllerBuilder;
 import dev.isxander.yacl3.impl.controller.BooleanControllerBuilderImpl;
 import net.enchantoutline.EnchantmentGlintOutline;
 import net.enchantoutline.config.EnchantmentOutlineConfig;
 import net.enchantoutline.config.ItemOverrideContainer;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 
 import java.awt.*;
@@ -34,10 +30,16 @@ public class YACLScreenFactory {
                                 .build())
                         .option(Option.<Color>createBuilder()
                                 .name(Text.translatable("option.enchantoutline.solidcolor"))
-                                .description(OptionDescription.of(Text.translatable("tooltip.option.enchantoutline.solidcolor").append(Text.translatable("tooltip.error.yamlcolorissue").formatted(Formatting.YELLOW))))
-                                .binding(EnchantmentOutlineConfig.getColorFromInt(defaultConfig.getOutlineColor()), () -> EnchantmentOutlineConfig.getColorFromInt(EnchantmentGlintOutline.getConfig().getOutlineColor()), (color) -> {EnchantmentGlintOutline.getConfig().setBaseSolidOutlineColor(EnchantmentOutlineConfig.getIntFromColor(color));})
+                                .description(OptionDescription.of(Text.translatable("tooltip.option.enchantoutline.solidcolor")))
+                                .binding(EnchantmentOutlineConfig.getColorFromInt(defaultConfig.getOutlineColor()), () -> EnchantmentOutlineConfig.getColorFromInt(EnchantmentGlintOutline.getConfig().getOutlineColor()), (color) -> EnchantmentGlintOutline.getConfig().setBaseSolidOutlineColor(EnchantmentOutlineConfig.getIntFromColor(color)))
                                 .controller(opt -> ColorControllerBuilder.create(opt)
                                         .allowAlpha(true))
+                                .build())
+                        .option(Option.<Boolean>createBuilder()
+                                .name(Text.translatable("option.enchantoutline.disableinventory"))
+                                .description(OptionDescription.of(Text.translatable("tooltip.option.enchantoutline.disableinventory")))
+                                .binding(defaultConfig.shouldDisableInventoryOutline(), EnchantmentGlintOutline.getConfig()::shouldDisableInventoryOutline, EnchantmentGlintOutline.getConfig()::setDisableInventoryOutline)
+                                .controller(BooleanControllerBuilderImpl::new)
                                 .build())
                         .group(OptionGroup.createBuilder()
                                 .name(Text.translatable("group.enchantoutline.item"))

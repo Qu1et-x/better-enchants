@@ -22,6 +22,8 @@
 "option.equipment.enchantoutline.rendersolid": "Solid outline color",
 "tooltip.option.equipment.enchantoutline.rendersolid": "Whether the outline on equipment should be a solid color or the outline glint shader.",
 "list.enchantoutline.override.equipment": "Equipment Overrides",
-"tooltip.list.enchantoutline.override.equipment": "Overrides all the outline settings on specific worn equipment items (e.g. turtle helmet, diamond chestplate). Items without a custom equipment renderer will use the item renderer even when worn in equipment slots.\n\nPlease note that due to a bug with YACL at the time of development these settings got a little crushed. To get labels for override settings, please reffer to the image above."
+"tooltip.list.enchantoutline.override.equipment": "Overrides all the outline settings on specific worn equipment items (e.g. turtle helmet, diamond chestplate). Items without a custom equipment renderer will use the item renderer even when worn in equipment slots.\n\nPlease note that due to a bug with YACL at the time of development these settings got a little crushed. To get labels for override settings, please reffer to the image above.",
+"option.enchantoutline.disableinventory": "Disable Outlines in Inventory",
+"tooltip.option.enchantoutline.disableinventory": "When enabled, enchanted item outlines are not drawn in the player's inventory UI (items will still have outlines in-world and other screens)."
 
 }
