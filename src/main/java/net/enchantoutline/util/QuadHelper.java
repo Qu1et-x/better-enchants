@@ -12,20 +12,28 @@ public class QuadHelper {
     public static final Logger LOGGER = LoggerFactory.getLogger(QuadHelper.class);
 
     public static List<BakedQuad> thickenQuad(List<BakedQuad> original, float percentSize){
+        // 使用改进的顶点偏移方法，自动检测几何复杂度并选择合适的方法
         return generateVertexBasedOutline(original, percentSize);
     }
     
-
+    /**
+     * 使用智能的轮廓生成方法，根据模型复杂度自动选择算法
+     */
     public static List<BakedQuad> generateVertexBasedOutline(List<BakedQuad> original, float thickness) {
         return VertexOutlineHelper.generateVertexBasedOutline(original, thickness);
     }
 
-    // The original method is retained for optional use
+    // 保留原有方法以供特殊情况使用
     @Deprecated
     public static List<BakedQuad> thickenQuadLegacy(List<BakedQuad> original, float percentSize){
         List<BakedQuad> newQuads = new ArrayList<>(original.size()*4);
         for (BakedQuad quad : original) {
-            Vector3f[] defaultVerts = {new Vector3f(quad.position0()), new Vector3f(quad.position1()), new Vector3f(quad.position2()), new Vector3f(quad.position3())};
+            Vector3f[] defaultVerts = {
+                new Vector3f(quad.position0()), 
+                new Vector3f(quad.position1()), 
+                new Vector3f(quad.position2()), 
+                new Vector3f(quad.position3())
+            };
 
             Vec3i intVec = quad.face().getVector();
             Vector3f faceVec = new Vector3f(intVec.getX(), intVec.getY(), intVec.getZ());
@@ -36,8 +44,11 @@ public class QuadHelper {
                 for (Vector3f dir : cardinalDirs) {
                     Vector3f[] vertPoses = VertexHelper.growFace(defaultVerts, dir, faceVec);
 
-                    //VertexHelper.flip(vertexData)
-                    BakedQuad enchantmentQuad = new BakedQuad(vertPoses[3], vertPoses[2], vertPoses[1], vertPoses[0], quad.packedUV3(), quad.packedUV2(), quad.packedUV1(), quad.packedUV0(), 0, quad.face().getOpposite(), null, false, 100);
+                    BakedQuad enchantmentQuad = new BakedQuad(
+                        vertPoses[3], vertPoses[2], vertPoses[1], vertPoses[0], 
+                        quad.packedUV3(), quad.packedUV2(), quad.packedUV1(), quad.packedUV0(), 
+                        0, quad.face().getOpposite(), null, false, 100
+                    );
 
                     newQuads.add(enchantmentQuad);
                 }
