@@ -12,6 +12,17 @@ public class QuadHelper {
     public static final Logger LOGGER = LoggerFactory.getLogger(QuadHelper.class);
 
     public static List<BakedQuad> thickenQuad(List<BakedQuad> original, float percentSize){
+        return generateVertexBasedOutline(original, percentSize);
+    }
+    
+
+    public static List<BakedQuad> generateVertexBasedOutline(List<BakedQuad> original, float thickness) {
+        return VertexOutlineHelper.generateVertexBasedOutline(original, thickness);
+    }
+
+    // The original method is retained for optional use
+    @Deprecated
+    public static List<BakedQuad> thickenQuadLegacy(List<BakedQuad> original, float percentSize){
         List<BakedQuad> newQuads = new ArrayList<>(original.size()*4);
         for (BakedQuad quad : original) {
             Vector3f[] defaultVerts = {new Vector3f(quad.position0()), new Vector3f(quad.position1()), new Vector3f(quad.position2()), new Vector3f(quad.position3())};
