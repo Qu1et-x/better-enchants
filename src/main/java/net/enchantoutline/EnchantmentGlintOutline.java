@@ -21,8 +21,11 @@ import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.client.render.entity.TridentEntityRenderer;
 import net.minecraft.client.render.item.ItemRenderState;
 import net.minecraft.client.render.model.BakedQuad;
+import net.minecraft.client.render.model.json.GeneratedItemModel;
+import net.minecraft.client.render.model.json.JsonUnbakedModel;
 import net.minecraft.client.util.BufferAllocator;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemDisplayContext;
 import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.ActionResult;
@@ -102,7 +105,23 @@ public class EnchantmentGlintOutline implements ModInitializer {
 					@Nullable ItemOverride override = getOverrideFromLayerRenderState(config::getItemOverride, receiver);
 					if(override == null || override.shouldRender()){
 						float scale = config.getScaleFactorFromOutlineSize(config.getOutlineSizeOverrideOrDefault(override, false));
-						List<BakedQuad> thickenedQuads = QuadHelper.thickenQuad(quads, scale);
+                        boolean is2DGenerated = false;
+                        JsonUnbakedModel model = ((ItemRenderState_LayerRenderStateAccessor)receiver).enchantOutline$getOwningModel();
+                        if (model != null) {
+                            // 逻辑指纹分析：
+                            // 1. 必须没有定义 elements 几何体
+                            // 2. 且父类必须指向原版 2D 物品的两个核心标识符
+                            if (model.geometry() == null && model.parent() != null) {
+                                String path = model.parent().getPath();
+                                // 逻辑推演：在 Minecraft 规范中，只有 2D 物品才会把祖先设为 generated 或 handheld
+                                if (path.equals("item/generated") || path.equals("item/handheld") || path.equals("builtin/generated")) {
+                                    is2DGenerated = true;
+                                }
+                            }
+                        }
+
+                        List<BakedQuad> thickenedQuads;
+                        thickenedQuads = QuadHelper.thickenQuad(quads, scale, is2DGenerated);
 						if(config.getRenderSolidOverrideOrDefault(override, false)) {
 							//render solid (by having no Z write, while Z test but rendering before the item is Rendered)
 
@@ -377,7 +396,7 @@ public class EnchantmentGlintOutline implements ModInitializer {
 		LayerRenderStateRenderSpecial.Callback.EVENT.register(((receiver, specialModelRenderer, o, itemDisplayContext, matrixStack, orderedRenderCommandQueue, light, overlay, glint, i) -> {
 			LAYER_RENDER_STATE_RENDER_MODEL_STORAGE.set(receiver);
 			// also track whether this special-model render call is for the GUI (inventory)
-			LAYER_RENDER_STATE_IS_GUI.set(itemDisplayContext == net.minecraft.item.ItemDisplayContext.GUI);
+			LAYER_RENDER_STATE_IS_GUI.set(itemDisplayContext == ItemDisplayContext.GUI);
 
 			return ActionResult.PASS;
 		}));

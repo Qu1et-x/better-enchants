@@ -11,20 +11,15 @@ import java.util.*;
 public class QuadHelper {
     public static final Logger LOGGER = LoggerFactory.getLogger(QuadHelper.class);
 
-    public static List<BakedQuad> thickenQuad(List<BakedQuad> original, float percentSize){
-        // 使用改进的顶点偏移方法，自动检测几何复杂度并选择合适的方法
-        return generateVertexBasedOutline(original, percentSize);
-    }
-    
-    /**
-     * 使用智能的轮廓生成方法，根据模型复杂度自动选择算法
-     */
-    public static List<BakedQuad> generateVertexBasedOutline(List<BakedQuad> original, float thickness) {
-        return VertexOutlineHelper.generateVertexBasedOutline(original, thickness);
+    public static List<BakedQuad> thickenQuad(List<BakedQuad> original, float percentSize, boolean is2D) {
+
+        if (is2D) {
+            return thickenQuadLegacy(original, percentSize);
+        } else {
+            return VertexOutlineHelper.generateVertexBasedOutline(original, percentSize);
+        }
     }
 
-    // 保留原有方法以供特殊情况使用
-    @Deprecated
     public static List<BakedQuad> thickenQuadLegacy(List<BakedQuad> original, float percentSize){
         List<BakedQuad> newQuads = new ArrayList<>(original.size()*4);
         for (BakedQuad quad : original) {

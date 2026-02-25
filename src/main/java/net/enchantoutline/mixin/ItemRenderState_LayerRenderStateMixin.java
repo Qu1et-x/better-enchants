@@ -17,11 +17,16 @@ import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
 @Mixin(ItemRenderState.LayerRenderState.class)
 public class ItemRenderState_LayerRenderStateMixin implements ItemRenderState_LayerRenderStateAccessor {
+    @Unique
+    private net.minecraft.client.render.model.json.JsonUnbakedModel enchantOutline$owningModel;
+
     @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/item/model/special/SpecialModelRenderer;render(Ljava/lang/Object;Lnet/minecraft/item/ItemDisplayContext;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;IIZI)V"))
     <T>void enchantOutline$renderItemSpecial(SpecialModelRenderer<T> instance, @Nullable T t, ItemDisplayContext itemDisplayContext, MatrixStack matrixStack, OrderedRenderCommandQueue orderedRenderCommandQueue, int light, int overlay, boolean glint, int i, Operation<Void> original){
         ActionResult result = LayerRenderStateRenderSpecial.Callback.EVENT.invoker().renderItem((ItemRenderState.LayerRenderState)(Object)this, instance, t, itemDisplayContext, matrixStack, orderedRenderCommandQueue, light, overlay, glint, i);
@@ -57,5 +62,20 @@ public class ItemRenderState_LayerRenderStateMixin implements ItemRenderState_La
     @Override
     public void enchantOutline$setOwningItemRenderState(@Nullable ItemRenderState itemRenderState) {
         this.owningItemRenderState = itemRenderState;
+    }
+
+    @Override
+    public void enchantOutline$setOwningModel(net.minecraft.client.render.model.json.JsonUnbakedModel model) {
+        this.enchantOutline$owningModel = model;
+    }
+
+    @Override
+    public net.minecraft.client.render.model.json.JsonUnbakedModel enchantOutline$getOwningModel() {
+        return this.enchantOutline$owningModel;
+    }
+
+    @Inject(method = "clear", at = @At("TAIL"))
+    private void onClear(CallbackInfo ci) {
+        this.enchantOutline$owningModel = null;
     }
 }
